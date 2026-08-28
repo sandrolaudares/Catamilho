@@ -26,8 +26,9 @@ READ_SIZE = 256         # limite de pixels por lado na leitura (downsample)
 MIN_PIXELS = 8          # minimo de pixels validos p/ aceitar uma data
 WORKERS = 8
 
-# Curvas mensais (jan..dez) de referencia — sistema soja -> milho safrinha
-# no Medio Norte do MT (Sorriso / Lucas do Rio Verde / Primavera do Leste).
+# Curvas mensais de referencia agora vivem em calibration.py (literatura +
+# amostras calibradas). Mantido aqui como fallback quando o modulo de
+# calibracao nao estiver disponivel.
 REFERENCE_CURVES = {
     "milho_safrinha": {
         "rotulo": "Soja + milho safrinha (dupla safra, Medio Norte MT)",
@@ -38,6 +39,11 @@ REFERENCE_CURVES = {
         "rotulo": "Soja em safra unica (sem 2a safra)",
         "mensal": [0.80, 0.55, 0.35, 0.30, 0.28, 0.26,
                    0.25, 0.25, 0.26, 0.35, 0.60, 0.82],
+    },
+    "milho_1a_safra": {
+        "rotulo": "Milho 1a safra (plantio out-nov, pico dez-jan)",
+        "mensal": [0.75, 0.65, 0.45, 0.30, 0.28, 0.27,
+                   0.26, 0.26, 0.28, 0.55, 0.78, 0.85],
     },
     "pastagem": {
         "rotulo": "Pastagem / cobertura perene",

@@ -1,7 +1,6 @@
-"""milho-ndvi API — identificacao de milho safrinha por serie temporal NDVI.
+"""milho-ndvi API v0.2 — regras + DTW + Savitzky-Golay + calibracao + MapBiomas.
 
 FastAPI + STAC (Planetary Computer) + leitura parcial de COG (rasterio).
-Padrao de deploy identico ao bauxita-sam (Fly.io, Dockerfile na raiz).
 """
 import datetime as dt
 import logging
@@ -11,43 +10,66 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
+import calibration
+import dtw
+import mapbiomas
+import smoothing
 from classify import classificar
-from stac_ndvi import REFERENCE_CURVES, serie_ndvi
+from stac_ndvi import serie_ndvi
 
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.1.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.2.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["*"], allow_headers=["*"],
 )
 
 
 class AnalyzeReq(BaseModel):
-    geometry: dict  # GeoJSON Polygon (EPSG:4326), validado no frontend como dentro de MT
-    start: str | None = None  # ISO date; default = hoje - 18 meses
+    geometry: dict
+    start: str | None = None
     end: str | None = None
     cloud_max: int = Field(70, ge=0, le=100)
     max_scenes: int = Field(140, ge=10, le=300)
+    smooth: bool = True
+    use_dtw: bool = True
+    validar_mapbiomas: bool = False
+    ano_validacao: int | None = None
+    mapbiomas_url: str | None = None
 
 
-class ClassifyReq(BaseModel):
-    series: list[dict]  # [{date, ndvi}, ...]
+class CalibReq(BaseModel):
+    classe: str  # milho_safrinha | soja_unica | milho_1a_safra | pastagem | algodao
+    geometry: dict
+    start: str
+    end: str
+    cloud_max: int = Field(70, ge=0, le=100)
+    max_scenes: int = Field(140, ge=10, le=300)
+    safra: str | None = None
+    municipio: str | None = None
+    observacao: str | None = None
+
+
+class ValidarReq(BaseModel):
+    geometry: dict
+    ano: int
+    classe_propria: str | None = None
+    url_override: str | None = None
 
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.2.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
 @app.get("/api/reference-curves")
 def curves():
-    """Curvas NDVI de referencia (mensal, jan..dez) para sobrepor no grafico."""
-    return REFERENCE_CURVES
+    """Curvas de referencia efetivas (calibradas quando ha amostras)."""
+    return calibration.get_reference_curves()
 
 
 @app.post("/api/analyze")
@@ -59,20 +81,92 @@ def analyze(req: AnalyzeReq):
     try:
         series, meta = serie_ndvi(req.geometry, start, end,
                                   req.cloud_max, req.max_scenes)
-    except Exception as e:  # falha de catalogo/rede/COS
+    except Exception as e:
         log.exception("stac")
         raise HTTPException(502, f"falha na consulta STAC/COG: {e}")
     if len(series) < 6:
         raise HTTPException(
-            422,
-            f"serie muito curta ({len(series)} datas uteis) — amplie o periodo "
-            "ou eleve o limite de nuvens")
+            422, f"serie muito curta ({len(series)} datas uteis)")
+
+    # 1) suavizacao / interpolacao
+    smoothed = smoothing.regularize(series) if req.smooth else None
+
+    # 2) regras (usa serie original — as regras ja fazem media mensal robusta)
     result = classificar(series, fim_serie=end)
-    return {"series": series, "meta": meta, "classification": result}
+
+    # 3) DTW contra curvas de referencia (calibradas se houver)
+    dtw_result = None
+    if req.use_dtw:
+        refs = calibration.get_reference_curves()
+        dtw_result = dtw.compare_curves(series, refs)
+        # se DTW diverge fortemente das regras, marca ambiguidade
+        if dtw_result.get("ok"):
+            best = dtw_result["melhor"]["classe"]
+            if result["classe"] == "pico_verao" and best in (
+                    "milho_1a_safra", "soja_unica"):
+                # DTW desempata o pico_verao
+                result["classe"] = best
+                result["veredito"] = (
+                    dtw_result["melhor"]["rotulo"] + " (desempatado por DTW)")
+                result["desempate_dtw"] = True
+
+    # 4) validacao cruzada MapBiomas (opcional)
+    validacao = None
+    confronto = None
+    if req.validar_mapbiomas:
+        ano = req.ano_validacao or (dt.date.today().year - 1)
+        validacao = mapbiomas.validar(req.geometry, ano,
+                                      url_override=req.mapbiomas_url)
+        confronto = mapbiomas.confrontar(result["classe"], validacao)
+
+    return {
+        "series": series, "meta": meta,
+        "classification": result,
+        "smoothed": smoothed,
+        "dtw": dtw_result,
+        "mapbiomas": validacao, "confronto": confronto,
+    }
 
 
-@app.post("/api/classify")
-def classify_only(req: ClassifyReq):
-    if len(req.series) < 6:
-        raise HTTPException(422, "minimo de 6 observacoes para classificar")
-    return classificar(req.series, fim_serie=None)
+@app.post("/api/calibrate")
+def calibrate(req: CalibReq):
+    """Registra uma amostra rotulada e atualiza a curva media da classe."""
+    if req.geometry.get("type") != "Polygon":
+        raise HTTPException(400, "geometry deve ser um Polygon GeoJSON")
+    try:
+        series, meta = serie_ndvi(req.geometry, req.start, req.end,
+                                  req.cloud_max, req.max_scenes)
+    except Exception as e:
+        raise HTTPException(502, f"falha na consulta STAC/COG: {e}")
+    if len(series) < 8:
+        raise HTTPException(
+            422, f"serie curta demais p/ calibrar ({len(series)} datas)")
+    try:
+        out = calibration.add_sample(
+            classe=req.classe, geometry=req.geometry, series=series,
+            safra=req.safra, municipio=req.municipio,
+            observacao=req.observacao)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "meta_ndvi": meta, **out}
+
+
+@app.get("/api/calibrate/samples")
+def list_calib():
+    return {"amostras": calibration.list_samples(),
+            "curvas": calibration.get_reference_curves()}
+
+
+@app.delete("/api/calibrate/samples/{sample_id}")
+def del_calib(sample_id: str):
+    if not calibration.delete_sample(sample_id):
+        raise HTTPException(404, "amostra nao encontrada")
+    return {"ok": True}
+
+
+@app.post("/api/validate")
+def validate(req: ValidarReq):
+    """Valida um poligono contra o MapBiomas 2a safra do ano informado."""
+    v = mapbiomas.validar(req.geometry, req.ano, url_override=req.url_override)
+    c = mapbiomas.confrontar(req.classe_propria or "", v) if req.classe_propria else None
+    return {"mapbiomas": v, "confronto": c}

@@ -70,6 +70,20 @@ footer { padding: 6px 16px; color: var(--muted); font-size: 12px; border-top: 1p
 #stages th, #stages td { text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
 #stages th { color: var(--muted); font-weight: 600; }
 
+.chk { display: flex; align-items: center; gap: 6px; margin: 6px 0; color: var(--muted); font-size: 13px; }
+.chk input { width: auto; }
+.step select { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--txt); }
+.step input[type=text], .step input[type=number] { width: 100%; padding: 6px; margin-top: 2px;
+  border-radius: 6px; border: 1px solid var(--line); background: var(--bg); color: var(--txt); }
+#btn-calib { width: 100%; margin-top: 8px; padding: 10px; border-radius: 8px; border: 1px solid var(--green-d);
+  background: var(--panel); color: var(--txt); cursor: pointer; font-size: 13px; }
+#btn-calib:hover:not(:disabled) { background: var(--green-d); }
+#btn-calib:disabled { color: var(--muted); cursor: not-allowed; }
+#dtw-table, #mb-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
+#dtw-table th, #dtw-table td, #mb-table th, #mb-table td {
+  text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }
+#dtw-table th, #mb-table th { color: var(--muted); font-weight: 600; }
 .exports { display: flex; gap: 8px; margin: 12px 0 20px; }
 .exports button { flex: 1; padding: 10px; border-radius: 8px; border: 1px solid var(--green-d);
   background: var(--green-d); color: var(--txt); cursor: pointer; font-size: 13px; }

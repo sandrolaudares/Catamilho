@@ -41,8 +41,31 @@
       <label>Nuvens máx. <span id="cloud-val">70%</span>
         <input type="range" id="cloud" min="20" max="100" value="70">
       </label>
+      <label class="chk"><input type="checkbox" id="opt-smooth" checked> Suavizar (Savitzky-Golay)</label>
+      <label class="chk"><input type="checkbox" id="opt-dtw" checked> Comparar por DTW</label>
+      <label class="chk"><input type="checkbox" id="opt-mb"> Validar com MapBiomas 2ª safra</label>
+      <label id="mb-year-lbl" style="display:none">Ano MapBiomas
+        <input type="number" id="mb-year" value="2024" min="2010" max="2025"></label>
       <button id="btn-analyze" disabled>Analisar polígono</button>
       <p id="status" class="status"></p>
+    </section>
+
+    <section class="step" id="calib-block">
+      <h2>4 · Calibrar (opcional)</h2>
+      <p class="hint">Marque um talhão <strong>conhecido</strong> para refinar as curvas.</p>
+      <label>Classe verdadeira
+        <select id="calib-classe">
+          <option value="milho_safrinha">Milho safrinha (dupla safra)</option>
+          <option value="soja_unica">Soja em safra única</option>
+          <option value="milho_1a_safra">Milho 1ª safra</option>
+          <option value="pastagem">Pastagem</option>
+          <option value="algodao">Algodão</option>
+        </select>
+      </label>
+      <label>Safra (ex.: 2024/25) <input type="text" id="calib-safra" placeholder="2024/25"></label>
+      <label>Município <input type="text" id="calib-mun" placeholder="Sorriso"></label>
+      <button id="btn-calib" disabled>Enviar como amostra de calibração</button>
+      <p id="calib-status" class="status"></p>
     </section>
 
     <section id="results" hidden>
@@ -64,6 +87,17 @@
 
       <h3>Série NDVI</h3>
       <div class="chart-wrap"><canvas id="ndvi-chart"></canvas></div>
+
+      <div id="dtw-block" hidden>
+        <h3>Ranking por DTW</h3>
+        <table id="dtw-table"><thead><tr><th>Classe</th><th>Similaridade</th><th>Dist.</th><th>Offset</th></tr></thead><tbody></tbody></table>
+      </div>
+
+      <div id="mb-block" hidden>
+        <h3>Validação MapBiomas 2ª safra</h3>
+        <p id="mb-summary" class="resumo"></p>
+        <table id="mb-table"><thead><tr><th>Classe</th><th>% do polígono</th></tr></thead><tbody></tbody></table>
+      </div>
 
       <h3>Estágios do ciclo</h3>
       <table id="stages">
