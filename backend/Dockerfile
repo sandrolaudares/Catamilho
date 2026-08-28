@@ -7,6 +7,9 @@ ENV PYTHONUNBUFFERED=1 \
     VSI_CACHE=YES
 
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libexpat1 libgdal36 \
+    && rm -rf /var/lib/apt/lists/*
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 COPY . .
