@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Milho NDVI · Médio Norte MT</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#14532d">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<header>
+  <h1>🌽 Milho NDVI <span>· Médio Norte — Mato Grosso</span></h1>
+  <p>Identificação de milho safrinha por série temporal NDVI (Sentinel-2, 10 m)</p>
+</header>
+
+<main>
+  <aside id="panel">
+    <section class="step">
+      <h2>1 · Navegue</h2>
+      <div class="presets">
+        <button data-mun="sorriso">Sorriso</button>
+        <button data-mun="lucas-do-rio-verde">Lucas do Rio Verde</button>
+        <button data-mun="primavera-do-leste">Primavera do Leste</button>
+      </div>
+    </section>
+
+    <section class="step">
+      <h2>2 · Desenhe o talhão</h2>
+      <p class="hint">Use a ferramenta ⬠ do mapa. O polígono deve estar
+        <strong>100% dentro de Mato Grosso</strong> (contorno tracejado amarelo).</p>
+    </section>
+
+    <section class="step">
+      <h2>3 · Período & nuvens</h2>
+      <label>Início <input type="date" id="dt-start"></label>
+      <label>Fim <input type="date" id="dt-end"></label>
+      <label>Nuvens máx. <span id="cloud-val">70%</span>
+        <input type="range" id="cloud" min="20" max="100" value="70">
+      </label>
+      <button id="btn-analyze" disabled>Analisar polígono</button>
+      <p id="status" class="status"></p>
+    </section>
+
+    <section id="results" hidden>
+      <h2>Resultado</h2>
+      <div class="verdict-card">
+        <div id="verdict-emoji" class="emoji">—</div>
+        <div>
+          <div id="verdict-text" class="verdict-text">—</div>
+          <div class="conf">
+            <div class="conf-track"><div id="conf-bar"></div></div>
+            <span id="verdict-conf">0%</span>
+          </div>
+          <p id="verdict-resumo" class="resumo"></p>
+        </div>
+      </div>
+
+      <h3>Regras fenológicas</h3>
+      <ul id="rules" class="rules"></ul>
+
+      <h3>Série NDVI</h3>
+      <div class="chart-wrap"><canvas id="ndvi-chart"></canvas></div>
+
+      <h3>Estágios do ciclo</h3>
+      <table id="stages">
+        <thead><tr><th>Fase</th><th>Janela</th><th>Esperado</th><th>Observado</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+
+      <div class="exports">
+        <button id="btn-json">⬇ JSON (GeoJSON + série + veredito)</button>
+        <button id="btn-png">⬇ PNG do gráfico</button>
+      </div>
+    </section>
+  </aside>
+
+  <section id="map-wrap"><div id="map"></div></section>
+</main>
+
+<footer>
+  Fonte: Sentinel-2 L2A (10 m) via Planetary Computer (STAC/COG) ·
+  Limites IBGE · Validação cruzada possível com MapBiomas (coleção agricultura)
+</footer>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@turf/turf@6.5.0/turf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Em producao, defina antes dos scripts:
+<script>window.MILHO_API_URL = 'https://milho-ndvi-api.fly.dev';</script> -->
+<script>window.MILHO_API_URL = window.MILHO_API_URL || '';</script>
+<script src="js/boundary.js"></script>
+<script src="js/map.js"></script>
+<script src="js/timeseries.js"></script>
+<script src="js/classify.js"></script>
+<script src="js/export.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

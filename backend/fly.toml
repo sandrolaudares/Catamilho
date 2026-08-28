@@ -1,0 +1,15 @@
+app = "milho-ndvi-api"
+primary_region = "gru"  # Sao Paulo — mais perto do Mato Grosso
+
+[build]
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "1gb"  # rasterio + numpy + 8 threads de leitura COG

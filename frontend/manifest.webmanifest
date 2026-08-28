@@ -1,0 +1,13 @@
+{
+  "name": "Milho NDVI — Médio Norte MT",
+  "short_name": "Milho NDVI",
+  "description": "Identificação de milho safrinha por série temporal NDVI (Sentinel-2) em polígonos dentro de Mato Grosso.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#0f1a12",
+  "theme_color": "#14532d",
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
