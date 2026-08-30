@@ -1,38 +1,68 @@
 """Proxy WFS para imoveis rurais do CAR (Sicar) — camada Mato Grosso.
 
-Evita problemas de CORS no navegador e normaliza a resposta do GeoServer:
-- bbox filter (independe do nome da coluna de geometria)
-- CQL_FILTER por codigo do imovel (tenta nomes de atributo candidatos)
-- normalizacao de ordem de eixos (WFS 2.0 pode vir lat/lon; garantimos lon/lat)
+O GeoServer nacional do Sicar usa TLS legado e rejeita o handshake de
+clientes Python modernos (SSLV3_ALERT_HANDSHAKE_FAILURE), enquanto aceita
+libcurl normalmente. Estrategia de robustez, em ordem:
+  1. urllib com contexto SSL relaxado (SECLEVEL=1, minimo TLSv1);
+  2. retries com backoff;
+  3. fallback para `curl` via subprocess (libcurl negocia com o servidor).
+
+Tambem normaliza a resposta: bbox filter (independe do nome da coluna de
+geometria), CQL_FILTER por codigo do imovel e ordem de eixos (garante lon/lat).
 """
 from __future__ import annotations
 
 import json
+import ssl
+import subprocess
+import time
 import urllib.parse
 import urllib.request
 
 CAR_WFS = "https://geoserver.car.gov.br/geoserver/sicar/wfs"
 CAR_LAYER = "sicar:sicar_imoveis_mt"
 TIMEOUT = 60
-# atributos observados no padrao nacional do Sicar
 COD_ATTRS = ["cod_imovel", "COD_IMOVEL", "codigo_imovel"]
 
+_SSL_CTX = ssl.create_default_context()
+try:
+    _SSL_CTX.set_ciphers("DEFAULT:@SECLEVEL=1")
+except Exception:
+    pass
+try:
+    _SSL_CTX.minimum_version = ssl.TLSVersion.TLSv1
+except Exception:
+    pass
 
-import time
+
+def _via_curl(url: str) -> dict:
+    r = subprocess.run(
+        ["curl", "-sS", "--retry", "3", "--retry-all-errors",
+         "-m", str(TIMEOUT), "-A", "milho-ndvi/0.3", url],
+        capture_output=True, timeout=TIMEOUT + 20)
+    if r.returncode != 0:
+        raise RuntimeError(r.stderr.decode()[:300] or f"curl rc={r.returncode}")
+    return json.loads(r.stdout.decode("utf-8"))
+
 
 def _request(params: dict) -> dict:
     qs = urllib.parse.urlencode(params, safe="()")
     url = f"{CAR_WFS}?{qs}"
     last = None
-    for attempt in range(4):
+    for attempt in range(3):
         try:
-            req = urllib.request.Request(url, headers={"User-Agent": "milho-ndvi/0.3"})
-            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+            req = urllib.request.Request(
+                url, headers={"User-Agent": "milho-ndvi/0.3"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT,
+                                        context=_SSL_CTX) as r:
                 return json.loads(r.read().decode("utf-8"))
         except Exception as e:
             last = e
-            time.sleep(2 * (attempt + 1))
-    raise last
+            time.sleep(1.5 * (attempt + 1))
+    try:
+        return _via_curl(url)
+    except Exception as e:
+        raise RuntimeError(f"urllib: {last}; curl: {e}")
 
 
 def _looks_swapped(coords) -> bool:
@@ -90,10 +120,8 @@ def por_codigo(cod: str, count: int = 3) -> list:
     last_err = None
     for attr in COD_ATTRS:
         try:
-            d = _get({"count": count},
-                     CQL_FILTER=f"{attr}='{cod}'")
-            feats = _normalize(d.get("features", []))
-            return feats
+            d = _get({"count": count}, CQL_FILTER=f"{attr}='{cod}'")
+            return _normalize(d.get("features", []))
         except Exception as e:
             last_err = e
             continue
