@@ -18,12 +18,21 @@ TIMEOUT = 60
 COD_ATTRS = ["cod_imovel", "COD_IMOVEL", "codigo_imovel"]
 
 
+import time
+
 def _request(params: dict) -> dict:
-    qs = urllib.parse.urlencode(params, safe="():,' ")
+    qs = urllib.parse.urlencode(params, safe="()")
     url = f"{CAR_WFS}?{qs}"
-    req = urllib.request.Request(url, headers={"User-Agent": "milho-ndvi/0.3"})
-    with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
-        return json.loads(r.read().decode("utf-8"))
+    last = None
+    for attempt in range(4):
+        try:
+            req = urllib.request.Request(url, headers={"User-Agent": "milho-ndvi/0.3"})
+            with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:
+            last = e
+            time.sleep(2 * (attempt + 1))
+    raise last
 
 
 def _looks_swapped(coords) -> bool:
