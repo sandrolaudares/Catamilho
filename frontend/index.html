@@ -35,6 +35,17 @@
     </section>
 
     <section class="step">
+      <h2>2b · Ou abra um imóvel do CAR</h2>
+      <label class="chk"><input type="checkbox" id="car-toggle"> Mostrar imóveis CAR (MT) no mapa</label>
+      <button id="car-pick" class="car-btn">🖱️ Selecionar imóvel por clique</button>
+      <label>Código do imóvel rural
+        <input type="text" id="car-cod" placeholder="MT-5107925-…"></label>
+      <button id="car-search" class="car-btn">🔎 Buscar imóvel por código</button>
+      <p class="hint">Fonte: GeoServer nacional do Sicar (camada MT). O imóvel
+        selecionado vira o polígono de análise — a trava de MT continua valendo.</p>
+    </section>
+
+    <section class="step">
       <h2>3 · Período & nuvens</h2>
       <label>Início <input type="date" id="dt-start"></label>
       <label>Fim <input type="date" id="dt-end"></label>
@@ -132,6 +143,7 @@
 <script src="js/timeseries.js"></script>
 <script src="js/classify.js"></script>
 <script src="js/export.js"></script>
+<script src="js/car.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

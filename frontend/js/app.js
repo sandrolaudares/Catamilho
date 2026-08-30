@@ -118,6 +118,7 @@ window.addEventListener('DOMContentLoaded', () => {
   initMap();
   loadBoundary();
   initDates();
+  initCAR();
 
   document.getElementById('btn-analyze').addEventListener('click', analyze);
   document.getElementById('btn-calib').addEventListener('click', calibrar);

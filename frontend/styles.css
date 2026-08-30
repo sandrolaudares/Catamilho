@@ -80,6 +80,11 @@ footer { padding: 6px 16px; color: var(--muted); font-size: 12px; border-top: 1p
   background: var(--panel); color: var(--txt); cursor: pointer; font-size: 13px; }
 #btn-calib:hover:not(:disabled) { background: var(--green-d); }
 #btn-calib:disabled { color: var(--muted); cursor: not-allowed; }
+.car-btn { width: 100%; margin: 6px 0; padding: 10px; border-radius: 8px;
+  border: 1px solid #b45309; background: var(--panel); color: var(--txt);
+  cursor: pointer; font-size: 13px; }
+.car-btn:hover { background: #3a2c12; }
+.car-btn.active { background: #b45309; color: #fff; font-weight: 600; }
 #dtw-table, #mb-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
 #dtw-table th, #dtw-table td, #mb-table th, #mb-table td {
   text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }

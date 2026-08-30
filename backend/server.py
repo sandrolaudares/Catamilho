@@ -11,6 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 import calibration
+import car
 import dtw
 import mapbiomas
 import smoothing
@@ -20,7 +21,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.2.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.3.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -62,7 +63,7 @@ class ValidarReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.2.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.3.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
@@ -170,3 +171,30 @@ def validate(req: ValidarReq):
     v = mapbiomas.validar(req.geometry, req.ano, url_override=req.url_override)
     c = mapbiomas.confrontar(req.classe_propria or "", v) if req.classe_propria else None
     return {"mapbiomas": v, "confronto": c}
+
+
+@app.get("/api/car/imoveis")
+def car_imoveis(bbox: str | None = None, cod: str | None = None,
+                count: int = 25):
+    """Imoveis rurais do CAR (Sicar-MT).
+    - bbox=minx,miny,maxx,maxy  -> imoveis que intersectam a caixa
+    - cod=MT-5107925-XXXX...    -> imovel pelo codigo CAR
+    """
+    try:
+        if cod:
+            feats = car.por_codigo(cod.strip(), count=3)
+        elif bbox:
+            parts = [float(v) for v in bbox.split(",")]
+            if len(parts) != 4:
+                raise ValueError("bbox precisa de 4 valores")
+            feats = car.por_bbox(*parts, count=min(count, 50))
+        else:
+            raise HTTPException(400, "informe bbox= ou cod=")
+    except ValueError as e:
+        raise HTTPException(400, f"parametro invalido: {e}")
+    except Exception as e:
+        log.exception("car")
+        raise HTTPException(502, f"falha na consulta ao CAR/Sicar: {e}")
+    return {"type": "FeatureCollection", "features": feats,
+            "total": len(feats),
+            "fonte": "Sicar/CAR — geoserver.car.gov.br (sicar_imoveis_mt)"}
