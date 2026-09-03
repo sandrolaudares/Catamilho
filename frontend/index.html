@@ -64,6 +64,21 @@
       <p id="status" class="status"></p>
     </section>
 
+    <section class="step" id="limiares-block">
+      <h2>3b · Calibração fina (avançado)</h2>
+      <div id="limiares-body"></div>
+      <label>Refinamento de fronteiras (vetorização)
+        <select id="refinar">
+          <option value="slic" selected>SLIC (rápido, sem modelo)</option>
+          <option value="auto">Automático (SAM se disponível, senão SLIC)</option>
+          <option value="sam">SAM (requer modelos ONNX)</option>
+          <option value="off">Desligado</option>
+        </select>
+      </label>
+      <p class="hint">Os limiares alimentam as regras fenológicas e a vetorização.
+        Use talhões conhecidos para encontrar os valores que separam milho de algodão.</p>
+    </section>
+
     <section class="step" id="calib-block">
       <h2>4 · Calibrar (opcional)</h2>
       <p class="hint">Marque um talhão <strong>conhecido</strong> para refinar as curvas.</p>
@@ -153,6 +168,7 @@
 <script src="js/classify.js"></script>
 <script src="js/export.js"></script>
 <script src="js/car.js"></script>
+<script src="js/limiares.js"></script>
 <script src="js/vectorize.js"></script>
 <script src="js/app.js"></script>
 </body>

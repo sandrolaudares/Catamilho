@@ -34,6 +34,7 @@ async function analyze() {
     use_dtw: document.getElementById('opt-dtw').checked,
     validar_mapbiomas: document.getElementById('opt-mb').checked,
     ano_validacao: +document.getElementById('mb-year').value || null,
+    limiares: (typeof getLimiares === 'function') ? getLimiares() : null,
   };
   try {
     const ctrl = new AbortController();

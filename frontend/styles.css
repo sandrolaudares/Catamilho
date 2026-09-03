@@ -91,6 +91,15 @@ footer { padding: 6px 16px; color: var(--muted); font-size: 12px; border-top: 1p
 #btn-vectorize:disabled { background: var(--line); color: var(--muted); cursor: not-allowed; }
 .ok-acc { color: var(--green); }
 .no-acc { color: var(--red); }
+.lim-row { margin: 8px 0; }
+.lim-row label { display: flex; justify-content: space-between; font-size: 12px;
+  color: var(--muted); margin-bottom: 2px; }
+.lim-val { color: var(--yellow); font-weight: 700; font-variant-numeric: tabular-nums; }
+.lim-row input[type=range] { width: 100%; accent-color: var(--yellow); }
+.lim-btns { display: flex; gap: 8px; margin-top: 10px; }
+.lim-btns button { flex: 1; padding: 8px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--txt); cursor: pointer; font-size: 12px; }
+.lim-btns button:hover { border-color: var(--yellow); }
 #dtw-table, #mb-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-bottom: 10px; }
 #dtw-table th, #dtw-table td, #mb-table th, #mb-table td {
   text-align: left; padding: 5px 6px; border-bottom: 1px solid var(--line); }

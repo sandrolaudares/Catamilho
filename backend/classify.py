@@ -1,20 +1,42 @@
 """Classificador fenologico por regras explicaveis — milho safrinha, Medio Norte MT.
 
+v0.5: todos os limiares sao parametrizaveis (dict `limiares`) para calibracao
+fina com talhoes conhecidos — util na separacao milho x algodao.
+
 Assinatura diagnostico (NDVI, Sentinel-2) da dupla safra soja -> milho:
   set-out  entressafra / preparo ......... 0.25-0.35
-  nov-jan  pico da soja .................. >= 0.70
-  jan-fev  VALE: colheita soja + plantio   queda >= 0.15 e <= 0.55
-  mar-mai  PICO do milho safrinha ........ >= 0.70
-  jun-jul  senescencia / colheita ........ queda >= 0.25 do pico
-
-O "W invertido" (pico -> vale -> pico) e quase exclusivo da dupla safra.
-Mesma filosofia do bauxita-sam: regras auditaveis, confianca por pesos.
+  nov-jan  pico da soja .................. >= soja_min
+  jan-fev  VALE: colheita soja + plantio   queda >= vale_queda_min e <= vale_max
+  mar-mai  PICO do milho safrinha ........ >= vigor_min
+  jun-jul  senescencia / colheita ........ queda >= senesc_min do pico
 """
 import datetime as dt
 
 import numpy as np
 
-PESO_MIN = 5  # peso minimo disponivel para classificar com seguranca
+PESO_MIN = 5
+
+LIMIARES_DEFAULT = {
+    "vigor_min": 0.70,      # pico mar-mai do milho safrinha
+    "outono_min": 0.15,     # pico outono > pos-pico em pelo menos isto
+    "vale_queda_min": 0.15, # queda pico soja -> vale jan-fev
+    "vale_max": 0.55,       # teto do NDVI no vale
+    "soja_min": 0.65,       # soja vigorosa antes do vale
+    "senesc_min": 0.25,     # queda do pico ate jun-jul
+    "ampl_min": 0.35,       # amplitude anual minima
+}
+
+
+def _lim(limiares):
+    out = dict(LIMIARES_DEFAULT)
+    if limiares:
+        for k, v in limiares.items():
+            if k in out and v is not None:
+                try:
+                    out[k] = float(v)
+                except (TypeError, ValueError):
+                    pass
+    return out
 
 
 def _mensal(series):
@@ -56,7 +78,7 @@ def _estagio(fase, janela, esperado, obs, lo=None, hi=None):
             "observado": round(obs, 2) if obs is not None else None, "ok": ok}
 
 
-def _insuficiente(nd, regras=None):
+def _insuficiente(nd, lim, regras=None):
     return {
         "classe": "dados_insuficientes",
         "veredito": "Dados insuficientes — amplie o período ou o limite de nuvens",
@@ -64,15 +86,16 @@ def _insuficiente(nd, regras=None):
         "regras": regras or [], "estagios": [],
         "ndvi_mensal": {str(m): nd[m] for m in range(1, 13)},
         "resumo": "Menos de 4 meses com observações válidas.",
-        "ciclo_em_andamento": False,
+        "ciclo_em_andamento": False, "limiares": lim,
     }
 
 
-def classificar(series, fim_serie=None):
+def classificar(series, fim_serie=None, limiares=None):
+    lim = _lim(limiares)
     nd = _mensal(series)
     obs = [v for v in nd.values() if v is not None]
     if len(obs) < 4:
-        return _insuficiente(nd)
+        return _insuficiente(nd, lim)
 
     pico_soja = _max(nd, 11, 12, 1)
     vale = _min(nd, 1, 2)
@@ -91,36 +114,36 @@ def classificar(series, fim_serie=None):
         })
 
     add("vigor_milho",
-        "Pico de NDVI em mar–mai ≥ 0.70 (vigor do milho safrinha)", 3,
-        pico_milho is not None,
-        pico_milho is not None and pico_milho >= 0.70)
+        f"Pico de NDVI em mar–mai ≥ {lim['vigor_min']:.2f} (vigor do milho safrinha)",
+        3, pico_milho is not None,
+        pico_milho is not None and pico_milho >= lim["vigor_min"])
     add("pico_no_outono",
-        "Pico de mar–mai supera jun–ago em ≥ 0.15 (ciclo curto de outono)", 1,
-        pico_milho is not None and pos_pico is not None,
+        f"Pico de mar–mai supera jun–ago em ≥ {lim['outono_min']:.2f} (ciclo curto de outono)",
+        1, pico_milho is not None and pos_pico is not None,
         pico_milho is not None and pos_pico is not None
-        and (pico_milho - pos_pico) >= 0.15)
+        and (pico_milho - pos_pico) >= lim["outono_min"])
     add("vale_jan_fev",
-        "Vale jan–fev (colheita da soja + plantio do milho): queda ≥ 0.15 e NDVI ≤ 0.55", 2,
-        vale is not None and pico_soja is not None,
+        f"Vale jan–fev: queda ≥ {lim['vale_queda_min']:.2f} e NDVI ≤ {lim['vale_max']:.2f}",
+        2, vale is not None and pico_soja is not None,
         vale is not None and pico_soja is not None
-        and (pico_soja - vale) >= 0.15 and vale <= 0.55)
+        and (pico_soja - vale) >= lim["vale_queda_min"] and vale <= lim["vale_max"])
     add("soja_forte",
-        "Soja vigorosa antes do vale (nov–jan ≥ 0.65)", 1,
-        pico_soja is not None,
-        pico_soja is not None and pico_soja >= 0.65)
+        f"Soja vigorosa antes do vale (nov–jan ≥ {lim['soja_min']:.2f})",
+        1, pico_soja is not None,
+        pico_soja is not None and pico_soja >= lim["soja_min"])
     add("senescencia",
-        "Senescência/colheita do milho em jun–jul (queda ≥ 0.25 do pico)", 2,
-        fim is not None and pico_milho is not None,
+        f"Senescência do milho em jun–jul (queda ≥ {lim['senesc_min']:.2f} do pico)",
+        2, fim is not None and pico_milho is not None,
         fim is not None and pico_milho is not None
-        and (pico_milho - fim) >= 0.25)
+        and (pico_milho - fim) >= lim["senesc_min"])
     add("amplitude",
-        "Amplitude anual ≥ 0.35 (rotação anual, não cobertura perene)", 1,
-        True, amplitude >= 0.35)
+        f"Amplitude anual ≥ {lim['ampl_min']:.2f} (rotação anual, não perene)",
+        1, True, amplitude >= lim["ampl_min"])
 
     peso_disp = sum(r["peso"] for r in regras if r["disponivel"])
     peso_ok = sum(r["peso"] for r in regras if r["disponivel"] and r["atendida"])
     if peso_disp < PESO_MIN:
-        return _insuficiente(nd, regras)
+        return _insuficiente(nd, lim, regras)
     conf = round(peso_ok / peso_disp, 3)
 
     if conf >= 0.72:
@@ -134,17 +157,16 @@ def classificar(series, fim_serie=None):
         if pico_soja and (pico_milho is None or pico_milho < 0.6) and pico_soja >= 0.7:
             classe, veredito, emoji = "soja_unica", \
                 "Soja em safra única — sem sinal de milho safrinha", "🌱"
-        elif amplitude < 0.25:
+        elif amplitude < lim["ampl_min"] - 0.10:
             classe, veredito, emoji = "perene", \
                 "Cobertura perene/pastagem — sem assinatura de dupla safra", "🟩"
         elif pico_verao and pico_verao >= 0.7:
             classe, veredito, emoji = "pico_verao", \
-                "Pico no verão — milho 1ª safra ou soja (regras não separam)", "🌾"
+                "Pico no verão — milho 1ª safra ou soja (DTW desempata)", "🌾"
         else:
             classe, veredito, emoji = "inconclusivo", \
                 "Inconclusivo — padrão fora das curvas de referência", "❓"
 
-    # ciclo ainda em andamento? (ultima data recente e antes da colheita)
     datas = sorted(str(s["date"])[:10] for s in series)
     ciclo_andamento = False
     if datas:
@@ -157,14 +179,16 @@ def classificar(series, fim_serie=None):
     estagios = [
         _estagio("Entressafra / preparo de solo", "set–out",
                  "0.25–0.35", _avg(nd, 9, 10), 0.20, 0.45),
-        _estagio("Pico da soja", "nov–jan", "≥ 0.65", pico_soja, lo=0.65),
+        _estagio("Pico da soja", "nov–jan", f"≥ {lim['soja_min']:.2f}",
+                 pico_soja, lo=lim["soja_min"]),
         _estagio("Vale: colheita soja + plantio milho", "jan–fev",
-                 "≤ 0.55", vale, hi=0.55),
-        _estagio("Pico do milho safrinha", "mar–mai", "≥ 0.70",
-                 pico_milho, lo=0.70),
+                 f"≤ {lim['vale_max']:.2f}", vale, hi=lim["vale_max"]),
+        _estagio("Pico do milho safrinha", "mar–mai", f"≥ {lim['vigor_min']:.2f}",
+                 pico_milho, lo=lim["vigor_min"]),
         _estagio("Senescência / colheita do milho", "jun–jul",
-                 "queda ≥ 0.25", fim,
-                 hi=(pico_milho - 0.25) if pico_milho is not None else None),
+                 f"queda ≥ {lim['senesc_min']:.2f}", fim,
+                 hi=(pico_milho - lim["senesc_min"])
+                 if pico_milho is not None else None),
     ]
 
     def f(v):
@@ -184,4 +208,5 @@ def classificar(series, fim_serie=None):
         "ndvi_mensal": {str(m): (round(nd[m], 3) if nd[m] is not None else None)
                         for m in range(1, 13)},
         "resumo": resumo, "ciclo_em_andamento": ciclo_andamento,
+        "limiares": lim,
     }

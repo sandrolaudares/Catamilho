@@ -22,7 +22,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.4.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.5.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -41,6 +41,7 @@ class AnalyzeReq(BaseModel):
     validar_mapbiomas: bool = False
     ano_validacao: int | None = None
     mapbiomas_url: str | None = None
+    limiares: dict | None = None
 
 
 class CalibReq(BaseModel):
@@ -64,7 +65,7 @@ class ValidarReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.4.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.5.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
@@ -94,7 +95,7 @@ def analyze(req: AnalyzeReq):
     smoothed = smoothing.regularize(series) if req.smooth else None
 
     # 2) regras (usa serie original — as regras ja fazem media mensal robusta)
-    result = classificar(series, fim_serie=end)
+    result = classificar(series, fim_serie=end, limiares=req.limiares)
 
     # 3) DTW contra curvas de referencia (calibradas se houver)
     dtw_result = None
@@ -212,6 +213,8 @@ class VectorizeReq(BaseModel):
     validar_mapbiomas: bool = True
     ano_mapbiomas: int | None = None
     mapbiomas_url: str | None = None
+    limiares: dict | None = None
+    refinar: str = Field("slic", pattern="^(off|slic|sam|auto)$")
 
 
 @app.post("/api/vectorize")
@@ -225,7 +228,8 @@ def vectorize(req: VectorizeReq):
     try:
         geojson, stats, mask, transform, crs = pixel_vectorize.vectorizar_milho(
             req.geometry, start, end, req.cloud_max, req.max_scenes,
-            req.threshold, req.min_area_ha)
+            req.threshold, req.min_area_ha, limiares=req.limiares,
+            refinar=req.refinar)
     except ValueError as e:
         raise HTTPException(422, str(e))
     except Exception as e:

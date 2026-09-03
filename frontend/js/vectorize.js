@@ -29,6 +29,8 @@ async function vectorizar() {
       min_area_ha: 2,
       validar_mapbiomas: true,
       ano_mapbiomas: +document.getElementById('mb-year').value || null,
+      limiares: (typeof getLimiares === 'function') ? getLimiares() : null,
+      refinar: (document.getElementById('refinar') || {}).value || 'slic',
     };
     const ctrl = new AbortController();
     const to = setTimeout(() => ctrl.abort(), 480000);
@@ -71,7 +73,9 @@ function renderVectorized(data) {
     `Milho vetorizado: ${s.area_milho_ha.toLocaleString('pt-BR')} ha de ` +
     `${s.area_total_ha.toLocaleString('pt-BR')} ha (${s.pct_milho}%) · ` +
     `${s.n_poligonos} polígonos · grade ${s.resolucao_m} m · ` +
-    `${s.cenas_usadas}/${s.cenas_encontradas} cenas`;
+    `${s.cenas_usadas}/${s.cenas_encontradas} cenas` +
+    (s.refinamento && s.refinamento.metodo && s.refinamento.metodo !== 'off'
+      ? ` · fronteiras refinadas (${s.refinamento.metodo})` : '');
 
   const el = document.getElementById('vec-acc');
   const a = data.acuracia;

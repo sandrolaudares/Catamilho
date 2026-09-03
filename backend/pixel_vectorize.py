@@ -28,6 +28,7 @@ from rasterio.warp import Resampling, reproject, transform_bounds, transform_geo
 from rasterio.windows import Window, from_bounds as win_from_bounds
 from shapely.geometry import mapping, shape
 
+from classify import LIMIARES_DEFAULT
 from stac_ndvi import search_scenes
 
 SCL_KEEP = (4, 5)
@@ -122,8 +123,17 @@ def _round_coords(o, nd=6):
 
 
 def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
-                     threshold=0.72, min_area_ha=2.0):
+                     threshold=0.72, min_area_ha=2.0, limiares=None,
+                     refinar="off"):
     """Retorna (geojson, stats, mask, transform, crs)."""
+    lim = dict(LIMIARES_DEFAULT)
+    if limiares:
+        for k, v in limiares.items():
+            if k in lim and v is not None:
+                try:
+                    lim[k] = float(v)
+                except (TypeError, ValueError):
+                    pass
     crs, transform, out_hw, res, grid_bounds = _ref_grid(geom)
     H, W = out_hw
     prop = geometry_mask([transform_geom("EPSG:4326", crs.to_string(), geom)],
@@ -180,17 +190,17 @@ def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
                  - np.fmin.reduce(mensal, axis=0))
 
     d_vigor = ~nan(pico_milho)
-    o_vigor = pico_milho >= 0.70
+    o_vigor = pico_milho >= lim["vigor_min"]
     d_out = ~(nan(pico_milho) | nan(pos_pico))
-    o_out = (pico_milho - pos_pico) >= 0.15
+    o_out = (pico_milho - pos_pico) >= lim["outono_min"]
     d_vale = ~(nan(vale) | nan(pico_soja))
-    o_vale = ((pico_soja - vale) >= 0.15) & (vale <= 0.55)
+    o_vale = ((pico_soja - vale) >= lim["vale_queda_min"]) & (vale <= lim["vale_max"])
     d_soja = ~nan(pico_soja)
-    o_soja = pico_soja >= 0.65
+    o_soja = pico_soja >= lim["soja_min"]
     d_sen = ~(nan(fim) | nan(pico_milho))
-    o_sen = (pico_milho - fim) >= 0.25
+    o_sen = (pico_milho - fim) >= lim["senesc_min"]
     d_amp = (n_meses >= 4) & ~nan(amplitude)
-    o_amp = amplitude >= 0.35
+    o_amp = amplitude >= lim["ampl_min"]
 
     num = (W_VIGOR * (d_vigor & o_vigor) + W_OUTONO * (d_out & o_out)
            + W_VALE * (d_vale & o_vale) + W_SOJA * (d_soja & o_soja)
@@ -205,6 +215,18 @@ def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
     mask = ((score >= threshold) & prop).astype("uint8")
     min_px = max(2, int(min_area_ha * 10000 / (res * res)))
     mask = (sieve(mask, size=min_px, connectivity=8) == 1).astype("uint8")
+
+    # refinamento de fronteiras (SLIC ou SAM) sobre o RGB do mes de pico
+    info_refine = {"metodo": "off"}
+    if refinar != "off":
+        try:
+            import sam_refine
+            mask, info_refine = sam_refine.refinar(
+                mask, prop, transform, crs, geom, start, end,
+                cloud_max, metodo=refinar)
+            mask = (sieve(mask, size=min_px, connectivity=8) == 1).astype("uint8")
+        except Exception as e:
+            info_refine = {"metodo": "off", "motivo": str(e)}
 
     px_total = int(prop.sum())
     px_milho = int((mask == 1).sum())
@@ -238,5 +260,7 @@ def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
         "cenas_encontradas": total,
         "cenas_usadas": usadas,
         "score_medio": round(float(np.mean(sc)), 3) if sc.size else None,
+        "limiares": lim,
+        "refinamento": info_refine,
     }
     return geojson, stats, mask, transform, crs
