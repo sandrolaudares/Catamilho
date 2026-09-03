@@ -246,3 +246,16 @@ def vectorize(req: VectorizeReq):
     return {"geojson": geojson, "stats": stats, "acuracia": acuracia,
             "meta": {"periodo": [start, end], "threshold": req.threshold,
                      "min_area_ha": req.min_area_ha}}
+
+
+class ClassifyReq(BaseModel):
+    series: list[dict]  # [{date, ndvi}, ...]
+    limiares: dict | None = None
+
+
+@app.post("/api/classify")
+def classify_only(req: ClassifyReq):
+    """Reclassifica uma serie ja calculada — usado pela UI de calibracao fina."""
+    if len(req.series) < 6:
+        raise HTTPException(422, "minimo de 6 observacoes para classificar")
+    return classificar(req.series, fim_serie=None, limiares=req.limiares)
