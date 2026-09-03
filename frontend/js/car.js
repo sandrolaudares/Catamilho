@@ -88,6 +88,7 @@ function _selectCarFeature(feature, origem) {
   });
   layer.eachLayer(l => state.drawn.addLayer(l));
   const p = _carPropsInfo(feature.properties);
+  state.carInfo = p;
   const alvo = layer.getLayers()[0];
   alvo.bindPopup(
     `<b>Imóvel CAR</b><br>` +

@@ -58,6 +58,9 @@
       <label id="mb-year-lbl" style="display:none">Ano MapBiomas
         <input type="number" id="mb-year" value="2024" min="2010" max="2025"></label>
       <button id="btn-analyze" disabled>Analisar polígono</button>
+      <button id="btn-vectorize" disabled>🎯 Vetorizar milho na propriedade (pixel a pixel, 10 m)</button>
+      <p class="hint">A vetorização classifica cada pixel da propriedade e desenha os
+        talhões de milho — fluxo ideal após abrir um imóvel do CAR (seção 2b).</p>
       <p id="status" class="status"></p>
     </section>
 
@@ -110,6 +113,12 @@
         <table id="mb-table"><thead><tr><th>Classe</th><th>% do polígono</th></tr></thead><tbody></tbody></table>
       </div>
 
+      <div id="vec-block" hidden>
+        <h3>🎯 Milho vetorizado na propriedade</h3>
+        <p id="vec-summary" class="resumo"></p>
+        <p id="vec-acc" class="resumo"></p>
+      </div>
+
       <h3>Estágios do ciclo</h3>
       <table id="stages">
         <thead><tr><th>Fase</th><th>Janela</th><th>Esperado</th><th>Observado</th><th></th></tr></thead>
@@ -144,6 +153,7 @@
 <script src="js/classify.js"></script>
 <script src="js/export.js"></script>
 <script src="js/car.js"></script>
+<script src="js/vectorize.js"></script>
 <script src="js/app.js"></script>
 </body>
 </html>

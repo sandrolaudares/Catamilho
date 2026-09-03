@@ -14,6 +14,7 @@ import calibration
 import car
 import dtw
 import mapbiomas
+import pixel_vectorize
 import smoothing
 from classify import classificar
 from stac_ndvi import serie_ndvi
@@ -21,7 +22,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.3.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.4.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -63,7 +64,7 @@ class ValidarReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.3.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.4.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
@@ -198,3 +199,46 @@ def car_imoveis(bbox: str | None = None, cod: str | None = None,
     return {"type": "FeatureCollection", "features": feats,
             "total": len(feats),
             "fonte": "Sicar/CAR — geoserver.car.gov.br (sicar_imoveis_mt)"}
+
+
+class VectorizeReq(BaseModel):
+    geometry: dict  # Polygon/MultiPolygon — tipicamente um imovel CAR
+    start: str | None = None
+    end: str | None = None
+    cloud_max: int = Field(70, ge=0, le=100)
+    max_scenes: int = Field(60, ge=6, le=200)
+    threshold: float = Field(0.72, ge=0.4, le=0.95)
+    min_area_ha: float = Field(2.0, ge=0.1, le=100)
+    validar_mapbiomas: bool = True
+    ano_mapbiomas: int | None = None
+    mapbiomas_url: str | None = None
+
+
+@app.post("/api/vectorize")
+def vectorize(req: VectorizeReq):
+    """Classifica milho pixel a pixel (10 m) dentro da propriedade e
+    vetoriza os talhoes; mede acuracia contra MapBiomas 2a safra."""
+    end = req.end or dt.date.today().isoformat()
+    start = req.start or (dt.date.today() - dt.timedelta(days=335)).isoformat()
+    if req.geometry.get("type") not in ("Polygon", "MultiPolygon"):
+        raise HTTPException(400, "geometry deve ser Polygon ou MultiPolygon")
+    try:
+        geojson, stats, mask, transform, crs = pixel_vectorize.vectorizar_milho(
+            req.geometry, start, end, req.cloud_max, req.max_scenes,
+            req.threshold, req.min_area_ha)
+    except ValueError as e:
+        raise HTTPException(422, str(e))
+    except Exception as e:
+        log.exception("vectorize")
+        raise HTTPException(502, f"falha na vetorizacao: {e}")
+    acuracia = None
+    if req.validar_mapbiomas:
+        ano = req.ano_mapbiomas or (dt.date.today().year - 2)
+        try:
+            acuracia = mapbiomas.acuracia_vs_mask(
+                mask, transform, crs, ano, url_override=req.mapbiomas_url)
+        except Exception as e:
+            acuracia = {"ok": False, "motivo": f"erro na validacao: {e}"}
+    return {"geojson": geojson, "stats": stats, "acuracia": acuracia,
+            "meta": {"periodo": [start, end], "threshold": req.threshold,
+                     "min_area_ha": req.min_area_ha}}

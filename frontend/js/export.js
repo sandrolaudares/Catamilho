@@ -19,7 +19,7 @@ function exportJSON() {
   const areaHa = turf.area(turf.polygon(state.geometry.coordinates)) / 10000;
   const payload = {
     tipo: 'milho-ndvi-analise',
-    versao_app: '0.1.0',
+    versao_app: '0.4.0',
     gerado_em: new Date().toISOString(),
     fonte: 'Sentinel-2 L2A via Planetary Computer (STAC/COG) · 10 m',
     poligono: {
@@ -29,6 +29,11 @@ function exportJSON() {
     },
     serie_ndvi: state.series,
     classificacao: state.cls,
+    car_imovel: state.carInfo || null,
+    vetorizado: state.vectorized
+      ? { geojson: state.vectorized.geojson, stats: state.vectorized.stats,
+          acuracia: state.vectorized.acuracia }
+      : null,
   };
   _download(new Blob([JSON.stringify(payload, null, 2)],
     { type: 'application/json' }), _fileName('json'));

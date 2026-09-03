@@ -14,6 +14,8 @@ function setStatus(msg, kind) {
 function updateAnalyzeBtn() {
   document.getElementById('btn-analyze').disabled = !state.valid;
   document.getElementById('btn-calib').disabled = !state.valid;
+  const vb = document.getElementById('btn-vectorize');
+  if (vb) vb.disabled = !state.valid;
 }
 
 async function analyze() {
