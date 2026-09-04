@@ -10,8 +10,41 @@ function initMap() {
   const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom: 19, attribution: '© OpenStreetMap' });
   esri.addTo(map);
-  L.control.layers({ 'Satélite (Esri)': esri, 'Ruas (OSM)': osm }).addTo(map);
+  const baseLayers = { 'Satélite (Esri)': esri, 'Ruas (OSM)': osm };
+  const layersCtl = L.control.layers(baseLayers).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
+  loadEsriLatestImagery(baseLayers, layersCtl);
+
+/* Busca a release MAIS RECENTE do mosaico global da Esri (Wayback Imagery)
+   e a torna o basemap padrao. Fallback silencioso p/ World Imagery classico. */
+async function loadEsriLatestImagery(baseLayers, layersCtl) {
+  try {
+    const cfg = await (await fetch(
+      'https://s3-us-west-2.amazonaws.com/config.maptiles.arcgis.com/waybackconfig.json'
+    )).json();
+    const releases = Object.keys(cfg).map(Number).filter(n => !isNaN(n));
+    if (!releases.length) return;
+    const latest = Math.max(...releases);
+    const meta = cfg[latest];
+    const url = meta.itemURL
+      .replace('{level}', '{z}').replace('{row}', '{y}').replace('{col}', '{x}');
+    const data = meta.releaseDate ? new Date(meta.releaseDate)
+      .toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }) : '';
+    const latestLayer = L.tileLayer(url, {
+      maxZoom: 19,
+      attribution: `Esri World Imagery · Wayback (release mais recente${data ? ' · ' + data : ''})`,
+    });
+    // sobe como padrao: remove o classico e adiciona o mais atualizado
+    map.removeLayer(esri);
+    latestLayer.addTo(map);
+    layersCtl.removeLayer(esri);
+    layersCtl.addBaseLayer(latestLayer, `🛰️ Satélite Esri — mais atualizado${data ? ' (' + data + ')' : ''}`);
+    layersCtl.addBaseLayer(esri, 'Satélite (Esri, clássico)');
+    console.log('[basemap] Esri Wayback release', latest, data);
+  } catch (e) {
+    console.warn('[basemap] Wayback indisponível, mantendo World Imagery clássico', e);
+  }
+}
 
   const drawn = new L.FeatureGroup();
   map.addLayer(drawn);
