@@ -22,8 +22,9 @@ async function analyze() {
   if (!state.valid) return;
   const btn = document.getElementById('btn-analyze');
   btn.disabled = true;
-  setStatus('Consultando Sentinel-2… (1ª análise pode levar 1–3 min)');
+  setStatus('Análise em andamento — veja o gauge de progresso.');
   document.getElementById('results').hidden = true;
+  showGauge();
 
   const body = {
     geometry: state.geometry,
@@ -60,12 +61,42 @@ async function analyze() {
     renderMapBiomas(data.mapbiomas, data.confronto);
     document.getElementById('results').hidden = false;
     setStatus(`✔ ${data.meta.cenas_processadas} cenas · ${data.meta.datas_validas} datas válidas`, 'ok');
-    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
+    // abre a analise em NOVA ABA como relatorio dedicado
+    openReportTab(data, body);
+    completeGauge();
   } catch (err) {
+    failGauge();
     setStatus('✖ ' + (err.name === 'AbortError'
       ? 'tempo esgotado — reduza o período' : err.message), 'err');
   } finally {
     btn.disabled = !state.valid;
+  }
+}
+
+/* Monta o payload do relatorio e abre em nova aba (report.html) */
+function openReportTab(data, params) {
+  try {
+    const areaHa = state.geometry
+      ? turf.area(turf.polygon(state.geometry.coordinates)) / 10000 : null;
+    const payload = {
+      gerado_em: new Date().toISOString(),
+      series: data.series,
+      classification: data.classification,
+      meta: data.meta,
+      dtw: data.dtw,
+      mapbiomas: data.mapbiomas,
+      confronto: data.confronto,
+      vectorized: state.vectorized || null,
+      carInfo: state.carInfo || null,
+      refCurve: (window.REF_CURVES && window.REF_CURVES.milho_safrinha)
+        ? window.REF_CURVES.milho_safrinha.mensal : null,
+      area_ha: areaHa,
+      params: { start: params.start, end: params.end, cloud_max: params.cloud_max },
+    };
+    sessionStorage.setItem('milho_report', JSON.stringify(payload));
+    window.open('report.html', '_blank', 'noopener');
+  } catch (e) {
+    console.warn('report tab falhou', e);
   }
 }
 

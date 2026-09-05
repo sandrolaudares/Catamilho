@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relatório · Milho NDVI — Médio Norte MT</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { background:#f7faf7; color:#14261a; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  .rp { max-width: 860px; margin: 0 auto; padding: 24px 18px 60px; }
+  .rp-hero { background: linear-gradient(135deg,#14532d,#1d6a3a); color:#fff; border-radius:16px;
+             padding:22px 24px; margin-bottom:20px; display:flex; justify-content:space-between;
+             align-items:center; flex-wrap:wrap; gap:12px; }
+  .rp-hero h1 { margin:0; font-size:22px; }
+  .rp-hero .sub { opacity:.85; font-size:13px; margin-top:4px; }
+  .rp-emoji { font-size:44px; }
+  .rp-verdict { font-size:19px; font-weight:700; }
+  .rp-conf { display:flex; align-items:center; gap:10px; margin-top:10px; }
+  .rp-track { flex:1; max-width:340px; height:10px; background:rgba(255,255,255,.25); border-radius:5px; overflow:hidden; }
+  .rp-bar { height:100%; background:linear-gradient(90deg,#fbbf24,#4ade80); }
+  .rp-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin-bottom:20px; }
+  .rp-card { background:#fff; border:1px solid #e2efe4; border-radius:12px; padding:14px; }
+  .rp-card h3 { margin:0 0 6px; font-size:12px; text-transform:uppercase; letter-spacing:.04em; color:#4a7c59; }
+  .rp-card .big { font-size:24px; font-weight:700; color:#14532d; }
+  .rp-card .mut { color:#7a9484; font-size:12px; }
+  .rp-sec { background:#fff; border:1px solid #e2efe4; border-radius:12px; padding:16px 18px; margin-bottom:16px; }
+  .rp-sec h2 { margin:0 0 12px; font-size:15px; color:#14532d; }
+  table.rp-tbl { width:100%; border-collapse:collapse; font-size:13px; }
+  table.rp-tbl th, table.rp-tbl td { text-align:left; padding:7px 8px; border-bottom:1px solid #eef3ee; }
+  table.rp-tbl th { color:#4a7c59; font-weight:600; font-size:12px; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:99px; font-size:11px; font-weight:700; }
+  .b-ok { background:#dcfce7; color:#166534; }
+  .b-no { background:#fee2e2; color:#991b1b; }
+  .b-na { background:#f1f5f1; color:#64748b; }
+  .chart-box { height:300px; }
+  .rp-actions { display:flex; gap:10px; flex-wrap:wrap; margin:18px 0; }
+  .rp-actions button { padding:11px 16px; border:0; border-radius:10px; background:#14532d; color:#fff;
+                       font-weight:600; cursor:pointer; font-size:13px; }
+  .rp-actions button.alt { background:#fff; color:#14532d; border:1px solid #bfe0c8; }
+  .rp-actions button:hover { filter:brightness(1.08); }
+  .rp-foot { color:#7a9484; font-size:12px; text-align:center; margin-top:26px; }
+  @media print { .rp-actions { display:none; } body { background:#fff; } }
+</style>
+</head>
+<body>
+<div class="rp" id="root">
+  <div class="rp-sec" style="text-align:center;padding:40px;">Carregando relatório…</div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const D = JSON.parse(sessionStorage.getItem('milho_report') || 'null');
+const $ = id => document.getElementById(id);
+function badge(ok){ return ok===true?'<span class="badge b-ok">✔</span>':ok===false?'<span class="badge b-no">✖</span>':'<span class="badge b-na">—</span>'; }
+function ha(v){ return (v==null?'—':(+v).toLocaleString('pt-BR',{maximumFractionDigits:1})+' ha'); }
+function pct(v){ return (v==null?'—':(v*100).toFixed(1)+'%'); }
+
+if (!D) {
+  document.getElementById('root').innerHTML =
+    '<div class="rp-sec" style="text-align:center;padding:40px;">Nenhum dado de análise encontrado. ' +
+    'Volte ao app e clique em "Analisar polígono".</div>';
+} else {
+  const c = D.classification || {}, m = D.meta || {}, car = D.carInfo || {};
+  const s = D.series || [];
+  document.getElementById('root').innerHTML = `
+  <div class="rp-hero">
+    <div>
+      <h1>🌽 Milho NDVI — Análise de Propriedade</h1>
+      <div class="sub">${car.cod ? 'CAR ' + car.cod + ' · ' : ''}${car.municipio ? car.municipio + '/MT · ' : ''}
+        Período ${D.params?.start || m.periodo?.[0] || ''} → ${D.params?.end || m.periodo?.[1] || ''}</div>
+      <div class="rp-verdict" style="margin-top:10px;">${c.emoji||''} ${c.veredito||'—'}</div>
+      <div class="rp-conf">
+        <div class="rp-track"><div class="rp-bar" style="width:${Math.round((c.confianca||0)*100)}%"></div></div>
+        <b>${Math.round((c.confianca||0)*100)}%</b>
+      </div>
+    </div>
+    <div class="rp-emoji">${c.emoji||'🌽'}</div>
+  </div>
+
+  <div class="rp-grid">
+    <div class="rp-card"><h3>Área analisada</h3><div class="big">${ha(D.area_ha)}</div>
+      <div class="mut">${m.datas_validas||s.length} datas de satélite</div></div>
+    <div class="rp-card"><h3>Cenas Sentinel-2</h3><div class="big">${m.cenas_processadas||'—'}</div>
+      <div class="mut">de ${m.cenas_encontradas||'—'} encontradas (nuvem ≤ ${D.params?.cloud_max||70}%)</div></div>
+    <div class="rp-card"><h3>Resolução</h3><div class="big">10 m</div>
+      <div class="mut">Sentinel-2 L2A · Planetary Computer</div></div>
+    ${D.vectorized ? `<div class="rp-card"><h3>Milho vetorizado</h3><div class="big">${ha(D.vectorized.stats.area_milho_ha)}</div>
+      <div class="mut">${D.vectorized.stats.pct_milho}% da propriedade · ${D.vectorized.stats.n_poligonos} polígonos</div></div>`:''}
+  </div>
+
+  ${c.resumo ? `<div class="rp-sec"><h2>Síntese fenológica</h2><p style="margin:0;font-size:14px;">${c.resumo}</p></div>`:''}
+
+  <div class="rp-sec"><h2>Série temporal de NDVI</h2><div class="chart-box"><canvas id="ch"></canvas></div></div>
+
+  ${(c.regras&&c.regras.length)?`<div class="rp-sec"><h2>Regras fenológicas</h2>
+    <table class="rp-tbl"><thead><tr><th>Regra</th><th>Peso</th><th></th></tr></thead><tbody>
+    ${c.regras.map(r=>`<tr><td>${r.descricao}</td><td>${r.peso}</td><td>${badge(r.atendida)}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+
+  ${(c.estagios&&c.estagios.length)?`<div class="rp-sec"><h2>Estágios do ciclo</h2>
+    <table class="rp-tbl"><thead><tr><th>Fase</th><th>Janela</th><th>Esperado</th><th>Observado</th><th></th></tr></thead><tbody>
+    ${c.estagios.map(e=>`<tr><td>${e.fase}</td><td>${e.janela}</td><td>${e.esperado}</td><td>${e.observado??'—'}</td><td>${badge(e.ok)}</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+
+  ${(D.dtw&&D.dtw.ok)?`<div class="rp-sec"><h2>Ranking por DTW (comparação com curvas de referência)</h2>
+    <table class="rp-tbl"><thead><tr><th>Classe</th><th>Similaridade</th><th>Distância</th><th>Offset</th></tr></thead><tbody>
+    ${D.dtw.ranking.map(r=>`<tr><td>${r.rotulo}</td><td>${(r.similaridade*100).toFixed(1)}%</td><td>${r.distancia.toFixed(3)}</td><td>${r.offset_meses>=0?'+':''}${r.offset_meses.toFixed(1)} m</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+
+  ${(D.mapbiomas&&D.mapbiomas.ok)?`<div class="rp-sec"><h2>Validação MapBiomas 2ª safra (${D.mapbiomas.ano})</h2>
+    <table class="rp-tbl"><thead><tr><th>Classe</th><th>% do polígono</th></tr></thead><tbody>
+    ${Object.values(D.mapbiomas.composicao).sort((a,b)=>b.fracao-a.fracao).map(x=>`<tr><td>${x.nome}</td><td>${(x.fracao*100).toFixed(1)}%</td></tr>`).join('')}
+    </tbody></table></div>`:''}
+
+  ${(D.vectorized&&D.vectorized.acuracia&&D.vectorized.acuracia.ok)?(()=>{const a=D.vectorized.acuracia;return `
+    <div class="rp-sec"><h2>Acurácia vs MapBiomas (${a.ano})</h2>
+    <table class="rp-tbl"><tbody>
+    <tr><td>Acurácia global</td><td><b>${(a.acuracia_global*100).toFixed(1)}%</b> ${a.atinge_meta_90?'<span class="badge b-ok">✔ atinge a meta ≥90%</span>':'<span class="badge b-no">abaixo da meta</span>'}</td></tr>
+    <tr><td>Precisão / Revocação</td><td>${(a.precisao*100).toFixed(1)}% / ${(a.revocacao*100).toFixed(1)}%</td></tr>
+    <tr><td>F1 / IoU</td><td>${(a.f1*100).toFixed(1)}% / ${(a.iou*100).toFixed(1)}%</td></tr>
+    </tbody></table></div>`;})():''}
+
+  <div class="rp-actions">
+    <button onclick="window.print()">🖨️ Imprimir / salvar PDF</button>
+    <button class="alt" id="dl-json">⬇ Baixar JSON completo</button>
+  </div>
+  <div class="rp-foot">Gerado por Milho NDVI · ${new Date(D.gerado_em).toLocaleString('pt-BR')} ·
+    Sentinel-2 L2A (Planetary Computer) · Limites IBGE · CAR/Sicar</div>
+  `;
+
+  // grafico
+  const ref = D.refCurve;
+  new Chart($('ch'), { type:'line', data:{ labels: s.map(x=>x.date), datasets:[
+    { label:'NDVI observado', data:s.map(x=>x.ndvi), borderColor:'#16a34a', backgroundColor:'#16a34a',
+      pointRadius:3, tension:0.25, spanGaps:true },
+    ...(ref?[{ label:'Referência milho safrinha', data:s.map(x=>ref[+x.date.slice(5,7)-1]),
+      borderColor:'#d97706', borderDash:[6,4], pointRadius:0, tension:0.3 }]:[]),
+  ]}, options:{ responsive:true, maintainAspectRatio:false,
+    scales:{ y:{min:0,max:1,title:{display:true,text:'NDVI'}}, x:{ticks:{maxTicksLimit:14}} } } });
+
+  $('dl-json').onclick = () => {
+    const b = new Blob([JSON.stringify(D, null, 2)], {type:'application/json'});
+    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
+    a.download = 'milho_relatorio_' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  };
+}
+</script>
+</body>
+</html>

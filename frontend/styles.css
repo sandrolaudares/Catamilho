@@ -109,6 +109,19 @@ footer { padding: 6px 16px; color: var(--muted); font-size: 12px; border-top: 1p
   background: var(--green-d); color: var(--txt); cursor: pointer; font-size: 13px; }
 .exports button:hover { filter: brightness(1.2); }
 
+/* --- gauge de progresso da analise --- */
+#gauge-overlay { display: none; position: fixed; inset: 0; background: rgba(10,18,12,.82);
+  z-index: 9999; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+.gauge-box { position: relative; width: 240px; text-align: center; }
+.gauge-svg { width: 240px; height: 240px; transform: rotate(-90deg); }
+.gauge-bg { fill: none; stroke: #223428; stroke-width: 10; }
+.gauge-fg { fill: none; stroke: #4ade80; stroke-width: 10; stroke-linecap: round;
+  transition: stroke-dashoffset .2s linear; }
+.gauge-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -56%); }
+#gauge-pct { font-size: 46px; font-weight: 800; color: #4ade80; font-variant-numeric: tabular-nums; }
+.gauge-label { color: #9db8a4; font-size: 13px; margin-top: -4px; }
+.gauge-tip { margin-top: 10px; color: #cbdccb; font-size: 13px; min-height: 18px; }
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; height: auto; }
   #map-wrap { order: -1; }
