@@ -259,3 +259,99 @@ def classify_only(req: ClassifyReq):
     if len(req.series) < 6:
         raise HTTPException(422, "minimo de 6 observacoes para classificar")
     return classificar(req.series, fim_serie=None, limiares=req.limiares)
+
+
+# ---------- analise com progresso real (streaming NDJSON) ----------
+import json as _json
+import queue as _queue
+import threading as _threading
+
+from fastapi.responses import StreamingResponse
+
+
+def _ndjson(obj):
+    return _json.dumps(obj, ensure_ascii=False) + "\n"
+
+
+@app.post("/api/analyze/stream")
+def analyze_stream(req: AnalyzeReq):
+    """Mesma analise do /api/analyze, mas transmite o progresso real:
+    cenas_encontradas -> processando (done/total) -> classificando -> concluido."""
+    end = req.end or dt.date.today().isoformat()
+    start = req.start or (dt.date.today() - dt.timedelta(days=548)).isoformat()
+
+    def gen():
+        from stac_ndvi import search_scenes
+        if req.geometry.get("type") != "Polygon":
+            yield _ndjson({"phase": "erro", "mensagem": "geometry deve ser Polygon"})
+            return
+        try:
+            items = search_scenes(req.geometry, start, end, req.cloud_max)
+        except Exception as e:
+            yield _ndjson({"phase": "erro", "mensagem": f"falha na busca STAC: {e}"})
+            return
+        yield _ndjson({"phase": "cenas_encontradas", "total": len(items)})
+
+        q = _queue.Queue()
+        holder = {}
+
+        def work():
+            try:
+                series, meta = serie_ndvi(
+                    req.geometry, start, end, req.cloud_max, req.max_scenes,
+                    items=items,
+                    on_progress=lambda d, t: q.put(("p", d, t)))
+                holder["series"] = series
+                holder["meta"] = meta
+            except Exception as e:
+                holder["error"] = str(e)
+            finally:
+                q.put(("fim",))
+
+        _threading.Thread(target=work, daemon=True).start()
+        while True:
+            item = q.get()
+            if item[0] == "p":
+                yield _ndjson({"phase": "processando",
+                               "done": item[1], "total": item[2]})
+            else:
+                break
+        if "error" in holder:
+            yield _ndjson({"phase": "erro", "mensagem": holder["error"]})
+            return
+        series, meta = holder["series"], holder["meta"]
+        if len(series) < 6:
+            yield _ndjson({"phase": "erro",
+                           "mensagem": f"serie muito curta ({len(series)} datas uteis)"})
+            return
+
+        yield _ndjson({"phase": "classificando"})
+        smoothed = smoothing.regularize(series) if req.smooth else None
+        result = classificar(series, fim_serie=end, limiares=req.limiares)
+        dtw_result = None
+        if req.use_dtw:
+            refs = calibration.get_reference_curves()
+            dtw_result = dtw.compare_curves(series, refs)
+            if dtw_result.get("ok"):
+                best = dtw_result["melhor"]["classe"]
+                if result["classe"] == "pico_verao" and best in (
+                        "milho_1a_safra", "soja_unica"):
+                    result["classe"] = best
+                    result["veredito"] = (dtw_result["melhor"]["rotulo"]
+                                          + " (desempatado por DTW)")
+                    result["desempate_dtw"] = True
+        validacao = confronto = None
+        if req.validar_mapbiomas:
+            ano = req.ano_validacao or (dt.date.today().year - 1)
+            try:
+                validacao = mapbiomas.validar(req.geometry, ano,
+                                              url_override=req.mapbiomas_url)
+                confronto = mapbiomas.confrontar(result["classe"], validacao)
+            except Exception:
+                validacao = None
+        payload = {"series": series, "meta": meta, "classification": result,
+                   "smoothed": smoothed, "dtw": dtw_result,
+                   "mapbiomas": validacao, "confronto": confronto}
+        yield _ndjson({"phase": "concluido", "data": payload})
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")

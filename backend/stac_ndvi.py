@@ -141,17 +141,28 @@ def _scene_point(item, geom):
         return None
 
 
-def serie_ndvi(geom, start, end, cloud_max=70, max_scenes=140):
-    """Retorna (series, meta). series = [{date, ndvi, pixels, cloud, tile}]."""
-    items = search_scenes(geom, start, end, cloud_max)
+def serie_ndvi(geom, start, end, cloud_max=70, max_scenes=140,
+               items=None, on_progress=None):
+    """Retorna (series, meta). series = [{date, ndvi, pixels, cloud, tile}].
+    items: lista pre-buscada (evita busca dupla no modo streaming).
+    on_progress(done, total): callback de progresso real por cena."""
+    if items is None:
+        items = search_scenes(geom, start, end, cloud_max)
     total = len(items)
     if total > max_scenes:  # amostra uniforme para respeitar o teto
         step = int(np.ceil(total / max_scenes))
         items = items[::step]
     out = []
+    done = 0
     with ThreadPoolExecutor(max_workers=WORKERS) as ex:
         futs = {ex.submit(_scene_point, it, geom): it for it in items}
         for f in as_completed(futs):
+            done += 1
+            if on_progress:
+                try:
+                    on_progress(done, len(items))
+                except Exception:
+                    pass
             p = f.result()
             if p:
                 out.append(p)

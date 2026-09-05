@@ -54,6 +54,19 @@ function showGauge() {
   }, 120);
 }
 
+/* Progresso REAL vindo do stream do backend — para a estimativa e mostra o
+   percentual/rotulo exatos informados pelo servidor. */
+function setGaugeProgress(p, label) {
+  clearInterval(_timer);
+  if (!_gauge) return;
+  const arc = document.getElementById('gauge-arc');
+  const circ = 2 * Math.PI * 52;
+  arc.style.strokeDashoffset = circ * (1 - Math.min(p, 99) / 100);
+  document.getElementById('gauge-pct').textContent = Math.round(p) + '%';
+  if (label) document.getElementById('gauge-tip').textContent = label;
+  document.getElementById('gauge-label').textContent = 'Analisando…';
+}
+
 function completeGauge() {
   clearInterval(_timer);
   if (!_gauge) return;

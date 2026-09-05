@@ -39,17 +39,41 @@ async function analyze() {
   };
   try {
     const ctrl = new AbortController();
-    const to = setTimeout(() => ctrl.abort(), 300000);
-    const r = await fetch(API + '/api/analyze', {
+    const to = setTimeout(() => ctrl.abort(), 480000);
+    const r = await fetch(API + '/api/analyze/stream', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body), signal: ctrl.signal,
     });
-    clearTimeout(to);
-    if (!r.ok) {
+    if (!r.ok || !r.body) {
       const e = await r.json().catch(() => ({ detail: r.statusText }));
       throw new Error(e.detail || 'erro desconhecido');
     }
-    const data = await r.json();
+    // leitura do stream NDJSON — progresso REAL do backend
+    const reader = r.body.getReader();
+    const dec = new TextDecoder();
+    let buf = '', data = null;
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      buf += dec.decode(value, { stream: true });
+      let i;
+      while ((i = buf.indexOf('\n')) >= 0) {
+        const line = buf.slice(0, i).trim(); buf = buf.slice(i + 1);
+        if (!line) continue;
+        const ev = JSON.parse(line);
+        if (ev.phase === 'cenas_encontradas')
+          setGaugeProgress(6, `${ev.total} cenas encontradas — baixando recortes…`);
+        else if (ev.phase === 'processando')
+          setGaugeProgress(6 + Math.round(82 * ev.done / Math.max(ev.total, 1)),
+            `Processando cena ${ev.done}/${ev.total} (NDVI)…`);
+        else if (ev.phase === 'classificando')
+          setGaugeProgress(92, 'Regras fenológicas + DTW…');
+        else if (ev.phase === 'concluido') data = ev.data;
+        else if (ev.phase === 'erro') throw new Error(ev.mensagem || 'erro no servidor');
+      }
+    }
+    clearTimeout(to);
+    if (!data) throw new Error('resposta incompleta do servidor');
     state.series = data.series;
     state.cls = data.classification;
     state.smoothed = data.smoothed;
