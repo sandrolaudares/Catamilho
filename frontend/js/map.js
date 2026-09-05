@@ -55,7 +55,7 @@ async function loadEsriLatestImagery(baseLayers, layersCtl) {
     latestLayer.addTo(map);
     layersCtl.removeLayer(esri);
     layersCtl.addBaseLayer(latestLayer, `🛰️ Satélite Esri — mais atualizado${data ? ' (' + data + ')' : ''}`);
-    layersCtl.addBaseLayer(esri, 'Satélite (Esri, clássico)');
+    // (o classico foi removido a pedido do usuario — fica apenas como fallback silencioso)
     // hibrido passa a usar a release mais recente como base de imagem
     const hibridoNovo = L.layerGroup([latestLayer, esriTransport, esriRotulos]);
     layersCtl.removeLayer(hibrido);

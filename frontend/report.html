@@ -48,6 +48,7 @@
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
 const D = JSON.parse(sessionStorage.getItem('milho_report') || 'null');
 const $ = id => document.getElementById(id);
@@ -121,8 +122,8 @@ if (!D) {
     </tbody></table></div>`;})():''}
 
   <div class="rp-actions">
-    <button onclick="window.print()">🖨️ Imprimir / salvar PDF</button>
-    <button class="alt" id="dl-json">⬇ Baixar JSON completo</button>
+    <button id="dl-pdf">⬇ Baixar PDF</button>
+    <button class="alt" onclick="window.print()">🖨️ Imprimir</button>
   </div>
   <div class="rp-foot">Gerado por Milho NDVI · ${new Date(D.gerado_em).toLocaleString('pt-BR')} ·
     Sentinel-2 L2A (Planetary Computer) · Limites IBGE · CAR/Sicar</div>
@@ -138,10 +139,19 @@ if (!D) {
   ]}, options:{ responsive:true, maintainAspectRatio:false,
     scales:{ y:{min:0,max:1,title:{display:true,text:'NDVI'}}, x:{ticks:{maxTicksLimit:14}} } } });
 
-  $('dl-json').onclick = () => {
-    const b = new Blob([JSON.stringify(D, null, 2)], {type:'application/json'});
-    const a = document.createElement('a'); a.href = URL.createObjectURL(b);
-    a.download = 'milho_relatorio_' + new Date().toISOString().slice(0,10) + '.json'; a.click();
+  $('dl-pdf').onclick = () => {
+    const btn = $('dl-pdf');
+    btn.disabled = true; btn.textContent = 'Gerando PDF…';
+    const nome = 'milho_relatorio_' + new Date().toISOString().slice(0, 10) + '.pdf';
+    html2pdf().set({
+      margin: [8, 8, 8, 8],
+      filename: nome,
+      image: { type: 'jpeg', quality: 0.92 },
+      html2canvas: { scale: 2, useCORS: true, logging: false },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['css', 'legacy'] },
+    }).from(document.getElementById('root')).save()
+      .finally(() => { btn.disabled = false; btn.textContent = '⬇ Baixar PDF'; });
   };
 }
 </script>

@@ -186,7 +186,6 @@ window.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-analyze').addEventListener('click', analyze);
   document.getElementById('btn-calib').addEventListener('click', calibrar);
-  document.getElementById('btn-json').addEventListener('click', exportJSON);
   document.getElementById('btn-png').addEventListener('click', exportPNG);
   document.querySelectorAll('.presets button').forEach(b =>
     b.addEventListener('click', () => flyToMunicipio(b.dataset.mun)));
