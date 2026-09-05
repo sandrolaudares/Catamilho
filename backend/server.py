@@ -355,3 +355,58 @@ def analyze_stream(req: AnalyzeReq):
         yield _ndjson({"phase": "concluido", "data": payload})
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+# ---------- vetorizacao com progresso real (streaming NDJSON) ----------
+@app.post("/api/vectorize/stream")
+def vectorize_stream(req: VectorizeReq):
+    end = req.end or dt.date.today().isoformat()
+    start = req.start or (dt.date.today() - dt.timedelta(days=335)).isoformat()
+
+    def gen():
+        if req.geometry.get("type") not in ("Polygon", "MultiPolygon"):
+            yield _ndjson({"phase": "erro", "mensagem": "geometry deve ser Polygon/MultiPolygon"})
+            return
+        yield _ndjson({"phase": "cenas_encontradas", "total": req.max_scenes})
+        q = _queue.Queue()
+        holder = {}
+
+        def work():
+            try:
+                out = pixel_vectorize.vectorizar_milho(
+                    req.geometry, start, end, req.cloud_max, req.max_scenes,
+                    req.threshold, req.min_area_ha, limiares=req.limiares,
+                    refinar=req.refinar,
+                    on_progress=lambda d, t: q.put(("p", d, t)))
+                holder["out"] = out
+            except Exception as e:
+                holder["error"] = str(e)
+            finally:
+                q.put(("fim",))
+
+        _threading.Thread(target=work, daemon=True).start()
+        while True:
+            item = q.get()
+            if item[0] == "p":
+                yield _ndjson({"phase": "processando", "done": item[1], "total": item[2]})
+            else:
+                break
+        if "error" in holder:
+            yield _ndjson({"phase": "erro", "mensagem": holder["error"]})
+            return
+        geojson, stats, mask, transform, crs = holder["out"]
+        yield _ndjson({"phase": "classificando"})
+        acuracia = None
+        if req.validar_mapbiomas:
+            ano = req.ano_mapbiomas or (dt.date.today().year - 2)
+            try:
+                acuracia = mapbiomas.acuracia_vs_mask(
+                    mask, transform, crs, ano, url_override=req.mapbiomas_url)
+            except Exception as e:
+                acuracia = {"ok": False, "motivo": f"erro na validacao: {e}"}
+        payload = {"geojson": geojson, "stats": stats, "acuracia": acuracia,
+                   "meta": {"periodo": [start, end], "threshold": req.threshold,
+                            "min_area_ha": req.min_area_ha}}
+        yield _ndjson({"phase": "concluido", "data": payload})
+
+    return StreamingResponse(gen(), media_type="application/x-ndjson")

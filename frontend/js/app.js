@@ -118,7 +118,13 @@ function openReportTab(data, params) {
       params: { start: params.start, end: params.end, cloud_max: params.cloud_max },
     };
     sessionStorage.setItem('milho_report', JSON.stringify(payload));
-    window.open('report.html', '_blank', 'noopener');
+    // nova janela centralizada (proporcional a tela), nao apenas nova aba
+    const w = Math.min(980, Math.round(screen.width * 0.8));
+    const h = Math.min(860, Math.round(screen.height * 0.9));
+    const left = Math.round((screen.width - w) / 2);
+    const top = Math.round((screen.height - h) / 2);
+    window.open('report.html', 'milho_report',
+      `width=${w},height=${h},left=${left},top=${top},noopener`);
   } catch (e) {
     console.warn('report tab falhou', e);
   }

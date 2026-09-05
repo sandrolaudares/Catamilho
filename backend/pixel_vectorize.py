@@ -124,7 +124,7 @@ def _round_coords(o, nd=6):
 
 def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
                      threshold=0.72, min_area_ha=2.0, limiares=None,
-                     refinar="off"):
+                     refinar="off", on_progress=None):
     """Retorna (geojson, stats, mask, transform, crs)."""
     lim = dict(LIMIARES_DEFAULT)
     if limiares:
@@ -148,10 +148,18 @@ def vectorizar_milho(geom, start, end, cloud_max=70, max_scenes=60,
     soma = np.zeros((12, H, W), dtype="float32")
     conta = np.zeros((12, H, W), dtype="float32")
     usadas = 0
+    _done = 0
+    _tot = len(items)
     with ThreadPoolExecutor(max_workers=WORKERS) as ex:
         futs = [ex.submit(_scene_to_grid, it, crs, transform, out_hw,
                           grid_bounds) for it in items]
         for f in as_completed(futs):
+            _done += 1
+            if on_progress:
+                try:
+                    on_progress(_done, _tot)
+                except Exception:
+                    pass
             r = f.result()
             if r is None:
                 continue

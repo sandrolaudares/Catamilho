@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Milho vetorizado · Milho NDVI</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  body { margin:0; font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; background:#f7faf7; color:#14261a; }
+  header { background:linear-gradient(135deg,#14532d,#1d6a3a); color:#fff; padding:16px 22px;
+           display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; }
+  header h1 { margin:0; font-size:19px; }
+  header .sub { opacity:.85; font-size:13px; margin-top:3px; }
+  #map { height:62vh; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:12px; padding:16px 22px; }
+  .card { background:#fff; border:1px solid #e2efe4; border-radius:12px; padding:14px; }
+  .card h3 { margin:0 0 5px; font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:#4a7c59; }
+  .card .big { font-size:22px; font-weight:700; color:#14532d; }
+  .card .mut { color:#7a9484; font-size:12px; margin-top:2px; }
+  .acc { margin:0 22px 20px; padding:14px 16px; border-radius:12px; background:#fff; border:1px solid #e2efe4; font-size:14px; }
+  .acc.ok { border-left:5px solid #16a34a; }
+  .acc.no { border-left:5px solid #dc2626; }
+  .badge { display:inline-block; padding:2px 10px; border-radius:99px; font-size:11px; font-weight:700; }
+  .b-ok { background:#dcfce7; color:#166534; } .b-no { background:#fee2e2; color:#991b1b; }
+  .actions { display:flex; gap:10px; padding:0 22px 26px; flex-wrap:wrap; }
+  .actions button { padding:10px 16px; border:0; border-radius:10px; background:#14532d; color:#fff;
+                    font-weight:600; cursor:pointer; font-size:13px; }
+  .actions button.alt { background:#fff; color:#14532d; border:1px solid #bfe0c8; }
+  table { width:calc(100% - 44px); margin:0 22px 26px; border-collapse:collapse; font-size:13px; background:#fff;
+          border-radius:12px; overflow:hidden; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid #eef3ee; }
+  th { color:#4a7c59; font-weight:600; font-size:12px; }
+  @media print { .actions { display:none; } #map { height:44vh; } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>🎯 Milho vetorizado na propriedade</h1>
+    <div class="sub" id="hdr-sub">Classificação pixel a pixel (Sentinel-2, 10 m)</div>
+  </div>
+</header>
+<div id="map"></div>
+<div class="cards" id="cards"></div>
+<div class="acc" id="acc"></div>
+<div id="tbl-wrap"></div>
+<div class="actions">
+  <button onclick="window.print()">🖨️ Imprimir / PDF</button>
+  <button class="alt" id="dl-geo">⬇ Baixar GeoJSON dos talhões</button>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const D = JSON.parse(sessionStorage.getItem('milho_vector') || 'null');
+const $ = id => document.getElementById(id);
+function ha(v){ return (v==null?'—':(+v).toLocaleString('pt-BR',{maximumFractionDigits:1})+' ha'); }
+
+if (!D) {
+  document.body.innerHTML = '<div style="padding:50px;text-align:center;">Nenhum resultado de vetorização. Volte ao app e clique em "Vetorizar milho na propriedade".</div>';
+} else {
+  const s = D.stats || {};
+  if (D.carInfo && D.carInfo.cod) $('hdr-sub').textContent =
+    `CAR ${D.carInfo.cod} · ${D.carInfo.municipio||''}/MT · grade ${s.resolucao_m} m`;
+
+  $('cards').innerHTML = `
+    <div class="card"><h3>Área da propriedade</h3><div class="big">${ha(s.area_total_ha)}</div>
+      <div class="mut">${(s.pixels_total||0).toLocaleString('pt-BR')} pixels</div></div>
+    <div class="card"><h3>🌽 Milho vetorizado</h3><div class="big">${ha(s.area_milho_ha)}</div>
+      <div class="mut">${s.pct_milho}% da propriedade</div></div>
+    <div class="card"><h3>Polígonos de milho</h3><div class="big">${s.n_poligonos}</div>
+      <div class="mut">score médio ${s.score_medio ?? '—'}</div></div>
+    <div class="card"><h3>Cenas usadas</h3><div class="big">${s.cenas_usadas}/${s.cenas_encontradas}</div>
+      <div class="mut">refino de fronteiras: ${(s.refinamento && s.refinamento.metodo) || 'off'}</div></div>`;
+
+  const a = D.acuracia;
+  const acc = $('acc');
+  if (a && a.ok) {
+    const ok = a.atinge_meta_90;
+    acc.className = 'acc ' + (ok ? 'ok' : 'no');
+    acc.innerHTML = `<b>Acurácia vs MapBiomas ${a.ano}: ${(a.acuracia_global*100).toFixed(1)}%</b> ` +
+      (ok ? '<span class="badge b-ok">✔ atinge a meta ≥90%</span>' : '<span class="badge b-no">abaixo da meta de 90%</span>') +
+      `<br>Precisão ${(a.precisao*100).toFixed(1)}% · Revocação ${(a.revocacao*100).toFixed(1)}% · ` +
+      `F1 ${(a.f1*100).toFixed(1)}% · IoU ${(a.iou*100).toFixed(1)}% · ${a.pixels.toLocaleString('pt-BR')} px comparados`;
+  } else {
+    acc.innerHTML = 'Acurácia vs MapBiomas indisponível nesta execução — a vetorização segue válida.';
+  }
+
+  // tabela de talhoes
+  const feats = (D.geojson && D.geojson.features) || [];
+  if (feats.length) {
+    $('tbl-wrap').innerHTML = `<table><thead><tr><th>#</th><th>Classe</th><th>Área</th></tr></thead><tbody>` +
+      feats.map((f,i)=>`<tr><td>${i+1}</td><td>${f.properties.classe}</td><td>${ha(f.properties.area_ha)}</td></tr>`).join('') +
+      `</tbody></table>`;
+  }
+
+  // mapa
+  const map = L.map('map');
+  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Esri World Imagery' }).addTo(map);
+  const prop = L.geoJSON(D.geometry, { style: { color:'#16a34a', weight:2, fill:false, dashArray:'5 4' } }).addTo(map);
+  const milho = L.geoJSON(D.geojson, {
+    style: { color:'#fbbf24', weight:1.5, fillColor:'#fbbf24', fillOpacity:0.45 },
+    onEachFeature: (f,l)=>l.bindPopup(`<b>Milho safrinha</b><br>${ha(f.properties.area_ha)}`),
+  }).addTo(map);
+  if (feats.length) map.fitBounds(prop.getBounds().extend(milho.getBounds()), { padding:[30,30] });
+  else map.fitBounds(prop.getBounds(), { padding:[30,30] });
+
+  $('dl-geo').onclick = () => {
+    const b = new Blob([JSON.stringify(D.geojson, null, 2)], {type:'application/geo+json'});
+    const a2 = document.createElement('a'); a2.href = URL.createObjectURL(b);
+    a2.download = 'milho_vetorizado_' + new Date().toISOString().slice(0,10) + '.geojson'; a2.click();
+  };
+}
+</script>
+</body>
+</html>
