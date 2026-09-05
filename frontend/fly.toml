@@ -1,4 +1,4 @@
-app = "milho-ndvi-web"
+app = "catamilho-web"
 primary_region = "gru"
 
 [build]

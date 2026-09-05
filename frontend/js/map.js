@@ -9,8 +9,24 @@ function initMap() {
     { maxZoom: 18, attribution: 'Esri World Imagery' });
   const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     { maxZoom: 19, attribution: '© OpenStreetMap' });
+  // ortofoto hibrida: imagem de satelite + rotulos de ruas/localidades
+  const esriRotulos = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Esri Reference' });
+  const esriTransport = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Transportation/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Esri Reference' });
+  const hibrido = L.layerGroup([esri, esriTransport, esriRotulos]);
+  const topo = L.tileLayer(
+    'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    { maxZoom: 19, attribution: 'Esri World Topo Map' });
   esri.addTo(map);
-  const baseLayers = { 'Satélite (Esri)': esri, 'Ruas (OSM)': osm };
+  const baseLayers = {
+    'Satélite (Esri)': esri,
+    '🗺️ Ortofoto híbrida (satélite + ruas)': hibrido,
+    'Topográfico (Esri)': topo,
+    'Ruas (OSM)': osm,
+  };
   const layersCtl = L.control.layers(baseLayers).addTo(map);
   L.control.scale({ imperial: false }).addTo(map);
   loadEsriLatestImagery(baseLayers, layersCtl);
@@ -40,6 +56,10 @@ async function loadEsriLatestImagery(baseLayers, layersCtl) {
     layersCtl.removeLayer(esri);
     layersCtl.addBaseLayer(latestLayer, `🛰️ Satélite Esri — mais atualizado${data ? ' (' + data + ')' : ''}`);
     layersCtl.addBaseLayer(esri, 'Satélite (Esri, clássico)');
+    // hibrido passa a usar a release mais recente como base de imagem
+    const hibridoNovo = L.layerGroup([latestLayer, esriTransport, esriRotulos]);
+    layersCtl.removeLayer(hibrido);
+    layersCtl.addBaseLayer(hibridoNovo, '🗺️ Ortofoto híbrida (satélite + ruas)');
     console.log('[basemap] Esri Wayback release', latest, data);
   } catch (e) {
     console.warn('[basemap] Wayback indisponível, mantendo World Imagery clássico', e);
