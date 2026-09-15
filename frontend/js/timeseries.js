@@ -76,29 +76,5 @@ function renderDTW(dtwRes) {
   });
 }
 
-function renderMapBiomas(mb, confronto) {
-  const block = document.getElementById('mb-block');
-  if (!mb) { block.hidden = true; return; }
-  block.hidden = false;
-  const sum = document.getElementById('mb-summary');
-  const tb = document.querySelector('#mb-table tbody');
-  tb.innerHTML = '';
-  if (!mb.ok) {
-    sum.textContent = 'MapBiomas indisponível: ' + (mb.motivo || 'erro') +
-      '. Você pode passar uma URL do raster via `mapbiomas_url` na chamada.';
-    return;
-  }
-  const pctDom = (mb.fracao_dominante * 100).toFixed(1);
-  const conc = confronto && confronto.comparavel
-    ? (confronto.concorda ? '✔ concorda com o classificador' : '✖ diverge do classificador')
-    : '';
-  sum.textContent = `Dominante: ${mb.classe_dominante_nome} (${pctDom}%) · ` +
-    `${mb.pixels_totais} px MapBiomas (30 m). ${conc}`;
-  Object.values(mb.composicao)
-    .sort((a, b) => b.fracao - a.fracao)
-    .forEach(c => {
-      const tr = document.createElement('tr');
-      tr.innerHTML = `<td>${c.nome}</td><td>${(c.fracao * 100).toFixed(1)}%</td>`;
-      tb.appendChild(tr);
-    });
-}
+/* MapBiomas removido do produto (v0.6) — funcao mantida como no-op. */
+function renderMapBiomas() {}

@@ -54,9 +54,6 @@
       </label>
       <label class="chk"><input type="checkbox" id="opt-smooth" checked> Suavizar (Savitzky-Golay)</label>
       <label class="chk"><input type="checkbox" id="opt-dtw" checked> Comparar por DTW</label>
-      <label class="chk"><input type="checkbox" id="opt-mb"> Validar com MapBiomas 2ª safra</label>
-      <label id="mb-year-lbl" style="display:none">Ano MapBiomas
-        <input type="number" id="mb-year" value="2024" min="2010" max="2025"></label>
       <button id="btn-analyze" disabled>Analisar polígono</button>
       <button id="btn-vectorize" disabled>🎯 Vetorizar milho na propriedade (pixel a pixel, 10 m)</button>
       <p class="hint">A vetorização classifica cada pixel da propriedade e desenha os
@@ -122,12 +119,6 @@
         <table id="dtw-table"><thead><tr><th>Classe</th><th>Similaridade</th><th>Dist.</th><th>Offset</th></tr></thead><tbody></tbody></table>
       </div>
 
-      <div id="mb-block" hidden>
-        <h3>Validação MapBiomas 2ª safra</h3>
-        <p id="mb-summary" class="resumo"></p>
-        <table id="mb-table"><thead><tr><th>Classe</th><th>% do polígono</th></tr></thead><tbody></tbody></table>
-      </div>
-
       <div id="vec-block" hidden>
         <h3>🎯 Milho vetorizado na propriedade</h3>
         <p id="vec-summary" class="resumo"></p>
@@ -150,8 +141,7 @@
 </main>
 
 <footer>
-  Fonte: Sentinel-2 L2A (10 m) via Planetary Computer (STAC/COG) ·
-  Limites IBGE · Validação cruzada possível com MapBiomas (coleção agricultura)
+  Fonte: Sentinel-2 L2A (10 m) via Planetary Computer (STAC/COG) · Limites IBGE · CAR/Sicar
 </footer>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>

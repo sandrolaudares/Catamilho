@@ -28,8 +28,6 @@ async function vectorizar() {
       max_scenes: 60,
       threshold: 0.72,
       min_area_ha: 2,
-      validar_mapbiomas: true,
-      ano_mapbiomas: +document.getElementById('mb-year').value || null,
       limiares: (typeof getLimiares === 'function') ? getLimiares() : null,
       refinar: (document.getElementById('refinar') || {}).value || 'slic',
     };

@@ -150,7 +150,6 @@ Botão **PNG** exporta o gráfico.
 
 1. **DTW** contra biblioteca de curvas de referência calibradas por município
    (features fenológicas + Random Forest na sequência).
-2. **Validação cruzada** com a camada anual de milho 2ª safra do MapBiomas
    (ground truth gratuito) para medir acurácia.
 3. Suporte a **PlanetScope 3 m/diário** (a arquitetura STAC já comporta outro
    catálogo) e a CBERS-4A.

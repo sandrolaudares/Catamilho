@@ -33,8 +33,6 @@ async function analyze() {
     cloud_max: +document.getElementById('cloud').value,
     smooth: document.getElementById('opt-smooth').checked,
     use_dtw: document.getElementById('opt-dtw').checked,
-    validar_mapbiomas: document.getElementById('opt-mb').checked,
-    ano_validacao: +document.getElementById('mb-year').value || null,
     limiares: (typeof getLimiares === 'function') ? getLimiares() : null,
   };
   try {
@@ -82,7 +80,6 @@ async function analyze() {
     renderChart(data.series, data.classification, data.smoothed);
     renderVerdict(data.classification);
     renderDTW(data.dtw);
-    renderMapBiomas(data.mapbiomas, data.confronto);
     document.getElementById('results').hidden = false;
     setStatus(`✔ ${data.meta.cenas_processadas} cenas · ${data.meta.datas_validas} datas válidas`, 'ok');
     // abre a analise em NOVA ABA como relatorio dedicado
@@ -192,10 +189,6 @@ window.addEventListener('DOMContentLoaded', () => {
   const cloud = document.getElementById('cloud');
   cloud.addEventListener('input', () =>
     document.getElementById('cloud-val').textContent = cloud.value + '%');
-  document.getElementById('opt-mb').addEventListener('change', (e) => {
-    document.getElementById('mb-year-lbl').style.display =
-      e.target.checked ? 'block' : 'none';
-  });
 
   fetch(API + '/api/reference-curves')
     .then(r => r.json())

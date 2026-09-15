@@ -31,8 +31,7 @@ function exportJSON() {
     classificacao: state.cls,
     car_imovel: state.carInfo || null,
     vetorizado: state.vectorized
-      ? { geojson: state.vectorized.geojson, stats: state.vectorized.stats,
-          acuracia: state.vectorized.acuracia }
+      ? { geojson: state.vectorized.geojson, stats: state.vectorized.stats }
       : null,
   };
   _download(new Blob([JSON.stringify(payload, null, 2)],
