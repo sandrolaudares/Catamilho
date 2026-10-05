@@ -553,3 +553,13 @@ def seed_demo(authorization: str | None = Header(None)):
                                    _r.choice(ips) % _r.randint(2, 250)))
                     eventos += 1
     return {"ok": True, "usuarios_criados": criados, "eventos_demo": eventos}
+
+
+# ---------- limpeza dos dados de demonstracao ----------
+@app.post("/api/admin/clear-demo")
+def clear_demo_endpoint(authorization: str | None = Header(None)):
+    """Remove todos os eventos marcados como demonstracao (meta demo:true).
+    Retorna quantos foram apagados. Os usuarios de demo sao mantidos."""
+    _admin_user(authorization)
+    n = _auth.clear_demo()
+    return {"ok": True, "eventos_removidos": n}

@@ -167,6 +167,24 @@ def track(user: str, event: str, page: str | None, target: str | None,
              (meta or "")[:500], ip))
 
 
+def clear_demo() -> int:
+    """Remove os eventos de demonstracao (meta com '"demo":true').
+    Retorna quantos foram apagados."""
+    with _conn() as c:
+        n = c.execute("DELETE FROM events WHERE meta LIKE '%\"demo\":true%'").rowcount
+    return n
+
+
+def clear_events(only_demo: bool = True) -> int:
+    """Limpa eventos. only_demo=True apaga so os de demo; False apaga TUDO."""
+    with _conn() as c:
+        if only_demo:
+            n = c.execute("DELETE FROM events WHERE meta LIKE '%\"demo\":true%'").rowcount
+        else:
+            n = c.execute("DELETE FROM events").rowcount
+    return n
+
+
 def analytics() -> dict:
     with _conn() as c:
         total = c.execute("SELECT COUNT(*) n FROM events").fetchone()["n"]

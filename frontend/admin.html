@@ -64,6 +64,9 @@
     </div>
 
     <section id="tab-analytics">
+      <div class="row" style="justify-content:flex-end;margin-bottom:12px">
+        <button class="mini danger" id="btn-clear-demo">🧹 Limpar dados de demonstração</button>
+      </div>
       <div class="kpis" id="kpis"></div>
       <div class="card"><h2>Eventos por dia (30 dias)</h2><div class="chart-box"><canvas id="ch-dia"></canvas></div></div>
       <div class="card"><h2>Uso por usuário</h2><table id="t-users"></table></div>
@@ -180,6 +183,14 @@ window.delUser = async (u) => {
   if (!confirm(`Remover o usuário "${u}"?`)) return;
   await api(`/api/admin/users/${u}`, { method: 'DELETE' });
   loadUsers();
+};
+$('btn-clear-demo').onclick = async () => {
+  if (!confirm('Apagar TODOS os eventos de demonstração? (os usuários são mantidos)')) return;
+  try {
+    const d = await api('/api/admin/clear-demo', { method: 'POST', body: '{}' });
+    alert(`✔ ${d.eventos_removidos} eventos de demonstração removidos`);
+    loadAnalytics();
+  } catch (e) { alert('✖ ' + e.message); }
 };
 $('nu-btn').onclick = async () => {
   $('nu-msg').textContent = '';
