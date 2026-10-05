@@ -23,7 +23,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.7.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.8.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -73,7 +73,7 @@ class VectorizeReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.7.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.8.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
@@ -347,3 +347,119 @@ def vectorize_stream(req: VectorizeReq):
 def providers():
     """Fontes de imagem disponiveis (alta resolucao requer chave/contrato)."""
     return highres.listar()
+
+
+# ---------- auth, gestao de usuarios e auditoria (v0.8) ----------
+import auth as _auth
+from fastapi import Header, Request
+
+_auth.init_db()  # cria tabelas + semeia admin (senha via ADMIN_PASSWORD)
+
+
+class LoginReq(BaseModel):
+    username: str
+    password: str
+
+
+class UserReq(BaseModel):
+    username: str
+    password: str
+    role: str = "user"
+
+
+class TrackReq(BaseModel):
+    event: str
+    page: str | None = None
+    target: str | None = None
+    meta: str | None = None
+
+
+def _admin_user(authorization: str | None):
+    tok = (authorization or "").replace("Bearer ", "").strip()
+    u = _auth.user_by_token(tok)
+    if not u or u["role"] != "admin":
+        raise HTTPException(401, "acesso restrito ao administrador")
+    return u
+
+
+@app.post("/api/auth/login")
+def auth_login(req: LoginReq, request: Request):
+    ip = request.client.host if request.client else ""
+    s = _auth.login(req.username, req.password, ip)
+    if not s:
+        raise HTTPException(401, "usuário ou senha inválidos")
+    return s
+
+
+@app.get("/api/auth/me")
+def auth_me(authorization: str | None = Header(None)):
+    tok = (authorization or "").replace("Bearer ", "").strip()
+    u = _auth.user_by_token(tok)
+    if not u:
+        raise HTTPException(401, "sessão inválida")
+    return u
+
+
+@app.post("/api/auth/logout")
+def auth_logout(authorization: str | None = Header(None)):
+    tok = (authorization or "").replace("Bearer ", "").strip()
+    _auth.logout(tok)
+    return {"ok": True}
+
+
+@app.post("/api/track")
+def track(req: TrackReq, request: Request,
+          authorization: str | None = Header(None)):
+    tok = (authorization or "").replace("Bearer ", "").strip()
+    u = _auth.user_by_token(tok)
+    ip = request.client.host if request.client else ""
+    _auth.track(u["username"] if u else "anon", req.event, req.page,
+                req.target, req.meta, ip)
+    return {"ok": True}
+
+
+@app.get("/api/admin/users")
+def admin_users(authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    return _auth.list_users()
+
+
+@app.post("/api/admin/users")
+def admin_create_user(req: UserReq, authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    if req.role not in ("user", "admin"):
+        raise HTTPException(400, "role deve ser user ou admin")
+    try:
+        return _auth.create_user(req.username, req.password, req.role)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    except Exception:
+        raise HTTPException(409, "usuário já existe")
+
+
+@app.post("/api/admin/users/{username}/{action}")
+def admin_toggle(username: str, action: str,
+                 authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    if action not in ("activate", "deactivate"):
+        raise HTTPException(400, "acao invalida")
+    if not _auth.set_active(username, action == "activate"):
+        raise HTTPException(404, "usuário não encontrado")
+    return {"ok": True}
+
+
+@app.delete("/api/admin/users/{username}")
+def admin_delete(username: str, authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    try:
+        if not _auth.delete_user(username):
+            raise HTTPException(404, "usuário não encontrado")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True}
+
+
+@app.get("/api/admin/analytics")
+def admin_analytics(authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    return _auth.analytics()

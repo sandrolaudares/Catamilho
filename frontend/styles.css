@@ -122,6 +122,23 @@ footer { padding: 6px 16px; color: var(--muted); font-size: 12px; border-top: 1p
 .gauge-label { color: #9db8a4; font-size: 13px; margin-top: -4px; }
 .gauge-tip { margin-top: 10px; color: #cbdccb; font-size: 13px; min-height: 18px; }
 
+/* --- login + user chip --- */
+#login-overlay { position: fixed; inset: 0; z-index: 10000; display: flex;
+  align-items: center; justify-content: center; background: linear-gradient(135deg,#0f1a12,#16241a); }
+.login-box { background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+  padding: 28px; width: 320px; display: flex; flex-direction: column; gap: 12px; }
+.login-box h2 { margin: 0; color: var(--green); text-align: center; }
+.login-box p { margin: 0; color: var(--muted); font-size: 13px; text-align: center; }
+.login-box input { padding: 10px; border-radius: 8px; border: 1px solid var(--line);
+  background: var(--bg); color: var(--txt); }
+.login-box button { padding: 11px; border: 0; border-radius: 8px; background: var(--green);
+  color: #052e12; font-weight: 700; cursor: pointer; }
+.login-err { color: var(--red); font-size: 12px; min-height: 16px; }
+#user-chip { margin-left: auto; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+#user-chip a { color: var(--yellow); text-decoration: none; }
+#user-chip a:hover { text-decoration: underline; }
+header { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; }
+
 @media (max-width: 900px) {
   main { grid-template-columns: 1fr; grid-template-rows: 55vh 1fr; height: auto; }
   #map-wrap { order: -1; }

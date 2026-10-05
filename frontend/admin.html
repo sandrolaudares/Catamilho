@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Catamilho</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { background:#f7faf7; color:#14261a; }
+  .adm { max-width: 1000px; margin: 0 auto; padding: 22px 18px 60px; }
+  .adm-hero { background:linear-gradient(135deg,#14532d,#1d6a3a); color:#fff;
+    border-radius:14px; padding:18px 22px; margin-bottom:18px;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .adm-hero h1 { margin:0; font-size:20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs button { padding:9px 16px; border-radius:9px; border:1px solid #cfe3d4;
+    background:#fff; cursor:pointer; font-weight:600; color:#14532d; }
+  .tabs button.on { background:#14532d; color:#fff; }
+  .card { background:#fff; border:1px solid #e2efe4; border-radius:12px;
+    padding:16px 18px; margin-bottom:14px; }
+  .card h2 { margin:0 0 12px; font-size:15px; color:#14532d; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid #eef3ee; }
+  th { color:#4a7c59; font-size:12px; font-weight:600; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .kpi { background:#fff; border:1px solid #e2efe4; border-radius:12px; padding:12px; }
+  .kpi .v { font-size:24px; font-weight:800; color:#14532d; }
+  .kpi .l { font-size:11px; color:#7a9484; text-transform:uppercase; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:700; }
+  .b-adm { background:#fef3c7; color:#92400e; } .b-usr { background:#e0f2e9; color:#166534; }
+  .b-off { background:#fee2e2; color:#991b1b; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .row input { padding:8px; border:1px solid #cfe3d4; border-radius:8px; flex:1; min-width:140px; }
+  .row button, .mini { padding:8px 14px; border:0; border-radius:8px; background:#14532d;
+    color:#fff; cursor:pointer; font-size:13px; }
+  .mini { padding:4px 10px; font-size:12px; }
+  .mini.danger { background:#b91c1c; }
+  .chart-box { height:220px; }
+  #gate { text-align:center; padding:60px 20px; }
+  #gate input { padding:10px; border:1px solid #cfe3d4; border-radius:8px; width:220px; }
+  #gate button { padding:10px 18px; border:0; border-radius:8px; background:#14532d; color:#fff; }
+</style>
+</head>
+<body>
+<div class="adm">
+  <div id="gate" class="card">
+    <h2>🔐 Área restrita — Administração</h2>
+    <p style="color:#7a9484">Somente o administrador.</p>
+    <input id="gate-user" placeholder="usuário" value="admin">
+    <input id="gate-pass" type="password" placeholder="senha">
+    <button id="gate-btn">Entrar</button>
+    <p id="gate-err" style="color:#b91c1c"></p>
+  </div>
+
+  <div id="panel" hidden>
+    <div class="adm-hero">
+      <div><h1>⚙️ Administração · Catamilho</h1>
+      <div style="opacity:.85;font-size:13px">gestão de usuários + auditoria de uso</div></div>
+      <a href="index.html" style="color:#fff">← voltar ao app</a>
+    </div>
+    <div class="tabs">
+      <button data-t="analytics" class="on">📊 Analytics</button>
+      <button data-t="users">👥 Usuários</button>
+    </div>
+
+    <section id="tab-analytics">
+      <div class="kpis" id="kpis"></div>
+      <div class="card"><h2>Eventos por dia (30 dias)</h2><div class="chart-box"><canvas id="ch-dia"></canvas></div></div>
+      <div class="card"><h2>Uso por usuário</h2><table id="t-users"></table></div>
+      <div class="card"><h2>Eventos por tipo</h2><table id="t-ev"></table></div>
+      <div class="card"><h2>Cliques mais frequentes</h2><table id="t-click"></table></div>
+      <div class="card"><h2>Páginas mais acessadas</h2><table id="t-page"></table></div>
+      <div class="card"><h2>Trilha de auditoria (100 eventos mais recentes)</h2><table id="t-log"></table></div>
+    </section>
+
+    <section id="tab-users" hidden>
+      <div class="card">
+        <h2>Criar usuário</h2>
+        <div class="row">
+          <input id="nu-name" placeholder="usuário">
+          <input id="nu-pass" type="password" placeholder="senha (mín. 4)">
+          <select id="nu-role"><option value="user">usuário</option><option value="admin">admin</option></select>
+          <button id="nu-btn">Criar</button>
+        </div>
+        <p id="nu-msg" style="font-size:13px;color:#4a7c59"></p>
+      </div>
+      <div class="card"><h2>Usuários cadastrados</h2><table id="t-manage"></table></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const API = '';
+let TOK = null;
+const $ = id => document.getElementById(id);
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' },
+    opts.headers || {}, TOK ? { 'Authorization': 'Bearer ' + TOK } : {});
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+$('gate-btn').onclick = async () => {
+  $('gate-err').textContent = '';
+  try {
+    const d = await api('/api/auth/login', { method: 'POST',
+      body: JSON.stringify({ username: $('gate-user').value,
+                             password: $('gate-pass').value }) });
+    if (d.role !== 'admin') throw new Error('esta conta não é administradora');
+    TOK = d.token;
+    $('gate').hidden = true; $('panel').hidden = false;
+    loadAnalytics(); loadUsers();
+  } catch (e) { $('gate-err').textContent = '✖ ' + e.message; }
+};
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  $('tab-analytics').hidden = b.dataset.t !== 'analytics';
+  $('tab-users').hidden = b.dataset.t !== 'users';
+});
+
+function tbl(el, head, rows) {
+  el.innerHTML = '<thead><tr>' + head.map(h => `<th>${h}</th>`).join('') +
+    '</tr></thead><tbody>' +
+    (rows.length ? rows.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('')
+                 : '<tr><td colspan=9 style="color:#7a9484">sem dados ainda</td></tr>') +
+    '</tbody>';
+}
+const fmt = ts => ts ? new Date(ts).toLocaleString('pt-BR') : '—';
+
+async function loadAnalytics() {
+  const a = await api('/api/admin/analytics');
+  const nu = a.usuarios.length;
+  const hoje = (a.por_dia.find(d => d.dia === new Date().toISOString().slice(0,10)) || {}).n || 0;
+  $('kpis').innerHTML = [
+    ['Eventos totais', a.total_eventos], ['Usuários ativos', nu],
+    ['Eventos hoje', hoje],
+    ['Análises', a.usuarios.reduce((s,u)=>s+u.analises,0)],
+    ['Vetorizações', a.usuarios.reduce((s,u)=>s+u.vetorizacoes,0)],
+  ].map(([l,v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  tbl($('t-users'),
+    ['Usuário','Eventos','Dias ativos','Logins','Cliques','Análises','Vetoriz.','Calibr.','Último evento'],
+    a.usuarios.map(u => [u.user, u.eventos, u.dias_ativos, u.logins, u.cliques,
+      u.analises, u.vetorizacoes, u.calibracoes, fmt(u.ultimo_evento)]));
+  tbl($('t-ev'), ['Evento','Total'], a.por_evento.map(e => [e.event, e.n]));
+  tbl($('t-click'), ['Alvo do clique','Vezes'], a.cliques_frequentes.map(c => [c.target, c.n]));
+  tbl($('t-page'), ['Página','Acessos'], a.por_pagina.map(p => [p.page, p.n]));
+  tbl($('t-log'), ['Quando','Usuário','Evento','Página','Alvo','IP'],
+    a.recentes.map(r => [fmt(r.ts), r.user, r.event, r.page || '—', r.target || '—', r.ip || '—']));
+
+  new Chart($('ch-dia'), { type:'bar',
+    data:{ labels: a.por_dia.map(d=>d.dia.slice(5).split('-').reverse().join('/')),
+      datasets:[{ label:'Eventos', data:a.por_dia.map(d=>d.n),
+        backgroundColor:'#4ade80', borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } } } });
+}
+
+async function loadUsers() {
+  const us = await api('/api/admin/users');
+  tbl($('t-manage'), ['Usuário','Papel','Status','Criado em','Eventos','Último acesso','Ações'],
+    us.map(u => [u.username,
+      u.role === 'admin' ? '<span class="badge b-adm">admin</span>' : '<span class="badge b-usr">user</span>',
+      u.active ? 'ativo' : '<span class="badge b-off">inativo</span>',
+      fmt(u.created_at), u.eventos, fmt(u.ultimo_acesso),
+      (u.username === 'admin' ? '—' :
+        `<button class="mini" onclick="toggleUser('${u.username}',${u.active ? 0 : 1})">${u.active ? 'desativar' : 'ativar'}</button> ` +
+        `<button class="mini danger" onclick="delUser('${u.username}')">remover</button>`)]));
+}
+window.toggleUser = async (u, act) => {
+  await api(`/api/admin/users/${u}/${act ? 'activate' : 'deactivate'}`, { method: 'POST' });
+  loadUsers();
+};
+window.delUser = async (u) => {
+  if (!confirm(`Remover o usuário "${u}"?`)) return;
+  await api(`/api/admin/users/${u}`, { method: 'DELETE' });
+  loadUsers();
+};
+$('nu-btn').onclick = async () => {
+  $('nu-msg').textContent = '';
+  try {
+    await api('/api/admin/users', { method: 'POST',
+      body: JSON.stringify({ username: $('nu-name').value,
+        password: $('nu-pass').value, role: $('nu-role').value }) });
+    $('nu-msg').textContent = '✔ usuário criado';
+    $('nu-name').value = ''; $('nu-pass').value = '';
+    loadUsers();
+  } catch (e) { $('nu-msg').textContent = '✖ ' + e.message; }
+};
+</script>
+</body>
+</html>
