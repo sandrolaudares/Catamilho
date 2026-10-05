@@ -27,7 +27,8 @@ app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.8.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
-    allow_methods=["*"], allow_headers=["*"],
+    allow_methods=["*"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 
