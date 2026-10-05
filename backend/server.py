@@ -464,3 +464,92 @@ def admin_delete(username: str, authorization: str | None = Header(None)):
 def admin_analytics(authorization: str | None = Header(None)):
     _admin_user(authorization)
     return _auth.analytics()
+
+
+# ---------- seed de demonstracao do analytics (1x, seguro) ----------
+@app.post("/api/admin/seed-demo")
+def seed_demo(authorization: str | None = Header(None)):
+    """Popula usuarios e eventos de auditoria realistas (ultimos 30 dias)
+    para demonstracao do painel. Idempotente: nao duplica se ja houver
+    eventos de demo."""
+    _admin_user(authorization)
+    import json as _j
+    import random as _r
+    _r.seed(42)
+    with _auth._conn() as c:
+        demo = c.execute("SELECT COUNT(*) n FROM events WHERE meta LIKE '%\"demo\":true%'").fetchone()["n"]
+        if demo > 50:
+            return {"ok": True, "msg": "demo ja existe", "eventos_demo": demo}
+
+    users = [("sandro.laudares", "admin"), ("maria.silva", "user"),
+             ("joao.agronomo", "user"), ("ana.consultora", "user"),
+             ("carlos.campo", "user")]
+    criados = []
+    for uname, role in users:
+        if not _auth.get_user(uname):
+            _auth.create_user(uname, "demo2026", role)
+            criados.append(uname)
+
+    muns = ["Sorriso", "Lucas do Rio Verde", "Primavera do Leste",
+            "Sinop", "Nova Mutum"]
+    alvos = ["btn-analyze", "btn-vectorize", "car-pick", "car-search",
+             "btn-calib", "opt-dtw", "opt-smooth", "dl-pdf", "btn-png",
+             "preset-sorriso", "preset-lucas", "mapa"]
+    paginas = ["index.html", "index.html", "index.html", "report.html",
+               "vector.html", "admin.html"]
+    ips = ["177.37.21.%d", "189.45.88.%d", "201.17.140.%d", "177.92.5.%d"]
+    eventos = 0
+    base = dt.datetime.utcnow()
+    for uname, _ in users:
+        n_dias = _r.randint(8, 22)                     # dias ativos no mes
+        dias = sorted(_r.sample(range(0, 30), n_dias))
+        for d in dias:
+            dia = base - dt.timedelta(days=d)
+            n_sess = _r.randint(1, 2)                  # 1-2 sessoes por dia
+            for _s in range(n_sess):
+                t = dia.replace(hour=_r.randint(7, 19),
+                                minute=_r.randint(0, 59))
+                # login + page_view
+                for ev in (("login", "index.html", None),
+                           ("page_view", "index.html", None)):
+                    with _auth._conn() as c:
+                        c.execute("INSERT INTO events(user,ts,event,page,target,meta,ip)"
+                                  " VALUES(?,?,?,?,?,?,?)",
+                                  (uname, t.isoformat() + "Z", ev[0], ev[1],
+                                   ev[2], _j.dumps({"demo": True}),
+                                   _r.choice(ips) % _r.randint(2, 250)))
+                    eventos += 1
+                # analise + cliques
+                if _r.random() < 0.8:
+                    t2 = t + dt.timedelta(minutes=_r.randint(2, 15))
+                    mun = _r.choice(muns)
+                    with _auth._conn() as c:
+                        c.execute("INSERT INTO events(user,ts,event,page,target,meta,ip)"
+                                  " VALUES(?,?,?,?,?,?,?)",
+                                  (uname, t2.isoformat() + "Z", "analyze",
+                                   "index.html", "btn-analyze",
+                                   _j.dumps({"demo": True, "municipio": mun,
+                                             "classe": _r.choice(["milho_safrinha", "algodao"])}),
+                                   _r.choice(ips) % _r.randint(2, 250)))
+                    eventos += 1
+                if _r.random() < 0.55:
+                    t3 = t + dt.timedelta(minutes=_r.randint(16, 40))
+                    with _auth._conn() as c:
+                        c.execute("INSERT INTO events(user,ts,event,page,target,meta,ip)"
+                                  " VALUES(?,?,?,?,?,?,?)",
+                                  (uname, t3.isoformat() + "Z", "vectorize",
+                                   "index.html", "btn-vectorize",
+                                   _j.dumps({"demo": True, "municipio": mun}),
+                                   _r.choice(ips) % _r.randint(2, 250)))
+                    eventos += 1
+                for _k in range(_r.randint(2, 8)):     # cliques avulsos
+                    tc = t + dt.timedelta(minutes=_r.randint(1, 50))
+                    with _auth._conn() as c:
+                        c.execute("INSERT INTO events(user,ts,event,page,target,meta,ip)"
+                                  " VALUES(?,?,?,?,?,?,?)",
+                                  (uname, tc.isoformat() + "Z", "click",
+                                   _r.choice(paginas), _r.choice(alvos),
+                                   _j.dumps({"demo": True}),
+                                   _r.choice(ips) % _r.randint(2, 250)))
+                    eventos += 1
+    return {"ok": True, "usuarios_criados": criados, "eventos_demo": eventos}
