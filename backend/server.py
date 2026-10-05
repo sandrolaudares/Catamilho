@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 import calibration
 import car
 import dtw
+import highres
 import pixel_vectorize
 import smoothing
 from classify import classificar
@@ -22,7 +23,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.6.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.7.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -72,7 +73,7 @@ class VectorizeReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.6.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.7.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 
@@ -323,3 +324,9 @@ def vectorize_stream(req: VectorizeReq):
         yield _ndjson({"phase": "concluido", "data": payload})
 
     return StreamingResponse(gen(), media_type="application/x-ndjson")
+
+
+@app.get("/api/providers")
+def providers():
+    """Fontes de imagem disponiveis (alta resolucao requer chave/contrato)."""
+    return highres.listar()

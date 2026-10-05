@@ -157,7 +157,20 @@ async function calibrar() {
     const n = (data.curvas[body.classe] && data.curvas[body.classe].n_amostras) || 1;
     stat.textContent = `✔ amostra salva (id ${data.sample.id}) · classe ${body.classe} com ${n} amostra(s) calibrada(s)`;
     // recarrega curvas para o proximo grafico
-    fetch(API + '/api/reference-curves').then(x => x.json()).then(c => { window.REF_CURVES = c; });
+    // provedores de imagem (Sentinel-2 ativo; VHR com chave/contrato)
+  fetch(API + '/api/providers').then(r => r.json()).then(p => {
+    const sel = document.getElementById('opt-provider');
+    Object.entries(p).forEach(([k, v]) => {
+      const o = document.createElement('option');
+      o.value = k; o.disabled = !v.ativo;
+      o.textContent = `${v.rotulo} — ${v.res_m} m${v.ativo ? '' : ' (requer chave/contrato)'}`;
+      sel.appendChild(o);
+    });
+    sel.addEventListener('change', () =>
+      document.getElementById('provider-note').textContent = p[sel.value].nota || '');
+  }).catch(() => {});
+
+  fetch(API + '/api/reference-curves').then(x => x.json()).then(c => { window.REF_CURVES = c; });
   } catch (err) {
     stat.className = 'status err';
     stat.textContent = '✖ ' + err.message;
