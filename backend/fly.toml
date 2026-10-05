@@ -13,3 +13,7 @@ primary_region = "gru"  # Sao Paulo — mais perto do Mato Grosso
 [[vm]]
   size = "shared-cpu-1x"
   memory = "1gb"  # rasterio + numpy + 8 threads de leitura COG
+
+[[mounts]]
+  source = "catamilho_data"
+  destination = "/data"
