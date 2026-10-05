@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin · Catamilho</title>
+<link rel="stylesheet" href="styles.css">
+<style>
+  body { background:#f7faf7; color:#14261a; }
+  .adm { max-width: 1000px; margin: 0 auto; padding: 22px 18px 60px; }
+  .adm-hero { background:linear-gradient(135deg,#14532d,#1d6a3a); color:#fff;
+    border-radius:14px; padding:18px 22px; margin-bottom:18px;
+    display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
+  .adm-hero h1 { margin:0; font-size:20px; }
+  .tabs { display:flex; gap:8px; margin-bottom:16px; }
+  .tabs button { padding:9px 16px; border-radius:9px; border:1px solid #cfe3d4;
+    background:#fff; cursor:pointer; font-weight:600; color:#14532d; }
+  .tabs button.on { background:#14532d; color:#fff; }
+  .card { background:#fff; border:1px solid #e2efe4; border-radius:12px;
+    padding:16px 18px; margin-bottom:14px; }
+  .card h2 { margin:0 0 12px; font-size:15px; color:#14532d; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:7px 8px; border-bottom:1px solid #eef3ee; }
+  th { color:#4a7c59; font-size:12px; font-weight:600; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:10px; margin-bottom:14px; }
+  .kpi { background:#fff; border:1px solid #e2efe4; border-radius:12px; padding:12px; }
+  .kpi .v { font-size:24px; font-weight:800; color:#14532d; }
+  .kpi .l { font-size:11px; color:#7a9484; text-transform:uppercase; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:99px; font-size:11px; font-weight:700; }
+  .b-adm { background:#fef3c7; color:#92400e; } .b-usr { background:#e0f2e9; color:#166534; }
+  .b-off { background:#fee2e2; color:#991b1b; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:10px; }
+  .row input { padding:8px; border:1px solid #cfe3d4; border-radius:8px; flex:1; min-width:140px; }
+  .row button, .mini { padding:8px 14px; border:0; border-radius:8px; background:#14532d;
+    color:#fff; cursor:pointer; font-size:13px; }
+  .mini { padding:4px 10px; font-size:12px; }
+  .mini.danger { background:#b91c1c; }
+  .chart-box { height:220px; }
+  #gate { text-align:center; padding:60px 20px; }
+  #gate input { padding:10px; border:1px solid #cfe3d4; border-radius:8px; width:220px; }
+  #gate button { padding:10px 18px; border:0; border-radius:8px; background:#14532d; color:#fff; }
+</style>
+
+<script>
+const DEMO_DATA = {"total_eventos": 996, "usuarios": [{"user": "ana.consultora", "eventos": 278, "dias_ativos": 21, "logins": 33, "cliques": 170, "analises": 22, "vetorizacoes": 20, "calibracoes": 0, "primeiro_evento": "2026-09-07T18:08:50.676367Z", "ultimo_evento": "2026-10-05T16:04:50.676367Z"}, {"user": "carlos.campo", "eventos": 223, "dias_ativos": 14, "logins": 27, "cliques": 131, "analises": 21, "vetorizacoes": 17, "calibracoes": 0, "primeiro_evento": "2026-09-06T17:55:50.676367Z", "ultimo_evento": "2026-10-04T13:12:50.676367Z"}, {"user": "sandro.laudares", "eventos": 201, "dias_ativos": 18, "logins": 23, "cliques": 126, "analises": 18, "vetorizacoes": 11, "calibracoes": 0, "primeiro_evento": "2026-09-06T09:35:50.676367Z", "ultimo_evento": "2026-10-05T15:37:50.676367Z"}, {"user": "maria.silva", "eventos": 183, "dias_ativos": 13, "logins": 23, "cliques": 109, "analises": 15, "vetorizacoes": 13, "calibracoes": 0, "primeiro_evento": "2026-09-07T11:41:50.676367Z", "ultimo_evento": "2026-10-05T20:06:50.676367Z"}, {"user": "joao.agronomo", "eventos": 102, "dias_ativos": 8, "logins": 12, "cliques": 60, "analises": 11, "vetorizacoes": 7, "calibracoes": 0, "primeiro_evento": "2026-09-06T12:59:50.676367Z", "ultimo_evento": "2026-10-03T13:49:50.676367Z"}, {"user": "admin", "eventos": 9, "dias_ativos": 1, "logins": 5, "cliques": 3, "analises": 0, "vetorizacoes": 0, "calibracoes": 0, "primeiro_evento": "2026-10-05T21:58:06.363997Z", "ultimo_evento": "2026-10-05T22:12:43.141804Z"}], "por_evento": [{"event": "click", "n": 599}, {"event": "login", "n": 123}, {"event": "page_view", "n": 119}, {"event": "analyze", "n": 87}, {"event": "vectorize", "n": 68}], "por_dia": [{"dia": "2026-09-06", "n": 33}, {"dia": "2026-09-07", "n": 45}, {"dia": "2026-09-08", "n": 23}, {"dia": "2026-09-09", "n": 16}, {"dia": "2026-09-10", "n": 37}, {"dia": "2026-09-11", "n": 17}, {"dia": "2026-09-12", "n": 47}, {"dia": "2026-09-13", "n": 59}, {"dia": "2026-09-14", "n": 62}, {"dia": "2026-09-15", "n": 31}, {"dia": "2026-09-16", "n": 42}, {"dia": "2026-09-17", "n": 33}, {"dia": "2026-09-18", "n": 41}, {"dia": "2026-09-19", "n": 29}, {"dia": "2026-09-21", "n": 18}, {"dia": "2026-09-22", "n": 29}, {"dia": "2026-09-23", "n": 30}, {"dia": "2026-09-24", "n": 20}, {"dia": "2026-09-25", "n": 27}, {"dia": "2026-09-26", "n": 17}, {"dia": "2026-09-27", "n": 38}, {"dia": "2026-09-28", "n": 65}, {"dia": "2026-09-29", "n": 22}, {"dia": "2026-09-30", "n": 31}, {"dia": "2026-10-01", "n": 36}, {"dia": "2026-10-02", "n": 22}, {"dia": "2026-10-03", "n": 48}, {"dia": "2026-10-04", "n": 41}, {"dia": "2026-10-05", "n": 37}], "por_pagina": [{"page": "index.html", "n": 696}, {"page": "vector.html", "n": 117}, {"page": "admin.html", "n": 98}, {"page": "report.html", "n": 80}, {"page": "/", "n": 5}], "cliques_frequentes": [{"target": "preset-lucas", "n": 65}, {"target": "opt-smooth", "n": 61}, {"target": "btn-vectorize", "n": 58}, {"target": "btn-calib", "n": 53}, {"target": "opt-dtw", "n": 50}, {"target": "dl-pdf", "n": 49}, {"target": "car-pick", "n": 49}, {"target": "btn-analyze", "n": 47}, {"target": "btn-png", "n": 42}, {"target": "mapa", "n": 41}, {"target": "car-search", "n": 41}, {"target": "preset-sorriso", "n": 40}, {"target": "\u2699\ufe0f Admin", "n": 3}], "recentes": [{"user": "admin", "ts": "2026-10-05T22:12:43.141804Z", "event": "login", "page": "/", "target": "", "ip": "172.16.57.154"}, {"user": "carlos.campo", "ts": "2026-09-06T18:25:50.676367Z", "event": "click", "page": "report.html", "target": "preset-sorriso", "ip": "177.92.5.24"}, {"user": "carlos.campo", "ts": "2026-09-06T18:37:50.676367Z", "event": "click", "page": "report.html", "target": "opt-smooth", "ip": "189.45.88.22"}, {"user": "carlos.campo", "ts": "2026-09-06T18:13:50.676367Z", "event": "click", "page": "index.html", "target": "btn-png", "ip": "189.45.88.142"}, {"user": "carlos.campo", "ts": "2026-09-06T18:27:50.676367Z", "event": "click", "page": "index.html", "target": "car-search", "ip": "201.17.140.250"}, {"user": "carlos.campo", "ts": "2026-09-06T18:26:50.676367Z", "event": "click", "page": "report.html", "target": "car-pick", "ip": "177.37.21.194"}, {"user": "carlos.campo", "ts": "2026-09-06T18:35:50.676367Z", "event": "click", "page": "index.html", "target": "btn-analyze", "ip": "189.45.88.131"}, {"user": "carlos.campo", "ts": "2026-09-06T18:00:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.92.5.40"}, {"user": "carlos.campo", "ts": "2026-09-06T17:55:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.37.21.112"}, {"user": "carlos.campo", "ts": "2026-09-06T17:55:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "201.17.140.134"}, {"user": "carlos.campo", "ts": "2026-09-06T20:06:50.676367Z", "event": "click", "page": "vector.html", "target": "mapa", "ip": "189.45.88.246"}, {"user": "carlos.campo", "ts": "2026-09-06T19:39:50.676367Z", "event": "click", "page": "admin.html", "target": "opt-dtw", "ip": "177.37.21.182"}, {"user": "carlos.campo", "ts": "2026-09-06T19:51:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "177.92.5.13"}, {"user": "carlos.campo", "ts": "2026-09-06T19:22:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "189.45.88.125"}, {"user": "carlos.campo", "ts": "2026-09-06T19:22:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.37.21.222"}, {"user": "carlos.campo", "ts": "2026-09-11T12:48:50.676367Z", "event": "click", "page": "admin.html", "target": "dl-pdf", "ip": "189.45.88.158"}, {"user": "carlos.campo", "ts": "2026-09-11T12:22:50.676367Z", "event": "click", "page": "index.html", "target": "opt-smooth", "ip": "177.92.5.207"}, {"user": "carlos.campo", "ts": "2026-09-11T12:19:50.676367Z", "event": "click", "page": "index.html", "target": "mapa", "ip": "177.37.21.243"}, {"user": "carlos.campo", "ts": "2026-09-11T12:26:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.92.5.168"}, {"user": "carlos.campo", "ts": "2026-09-11T12:11:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.92.5.248"}, {"user": "carlos.campo", "ts": "2026-09-11T12:11:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.37.21.104"}, {"user": "carlos.campo", "ts": "2026-09-11T11:13:50.676367Z", "event": "click", "page": "vector.html", "target": "btn-calib", "ip": "177.37.21.97"}, {"user": "carlos.campo", "ts": "2026-09-11T11:26:50.676367Z", "event": "click", "page": "index.html", "target": "opt-dtw", "ip": "201.17.140.230"}, {"user": "carlos.campo", "ts": "2026-09-11T11:33:50.676367Z", "event": "click", "page": "index.html", "target": "btn-analyze", "ip": "189.45.88.171"}, {"user": "carlos.campo", "ts": "2026-09-11T11:28:50.676367Z", "event": "click", "page": "index.html", "target": "opt-smooth", "ip": "177.37.21.26"}, {"user": "carlos.campo", "ts": "2026-09-11T10:56:50.676367Z", "event": "click", "page": "index.html", "target": "btn-calib", "ip": "201.17.140.207"}, {"user": "carlos.campo", "ts": "2026-09-11T11:03:50.676367Z", "event": "click", "page": "index.html", "target": "dl-pdf", "ip": "177.37.21.27"}, {"user": "carlos.campo", "ts": "2026-09-11T10:51:50.676367Z", "event": "click", "page": "index.html", "target": "preset-lucas", "ip": "189.45.88.118"}, {"user": "carlos.campo", "ts": "2026-09-11T11:16:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "177.37.21.187"}, {"user": "carlos.campo", "ts": "2026-09-11T10:47:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "189.45.88.245"}, {"user": "carlos.campo", "ts": "2026-09-11T10:44:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "189.45.88.2"}, {"user": "carlos.campo", "ts": "2026-09-11T10:44:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.92.5.86"}, {"user": "carlos.campo", "ts": "2026-09-12T08:28:50.676367Z", "event": "click", "page": "report.html", "target": "btn-calib", "ip": "189.45.88.12"}, {"user": "carlos.campo", "ts": "2026-09-12T07:55:50.676367Z", "event": "click", "page": "index.html", "target": "btn-png", "ip": "189.45.88.93"}, {"user": "carlos.campo", "ts": "2026-09-12T07:50:50.676367Z", "event": "click", "page": "index.html", "target": "dl-pdf", "ip": "189.45.88.157"}, {"user": "carlos.campo", "ts": "2026-09-12T07:49:50.676367Z", "event": "click", "page": "vector.html", "target": "mapa", "ip": "177.37.21.74"}, {"user": "carlos.campo", "ts": "2026-09-12T08:21:50.676367Z", "event": "click", "page": "admin.html", "target": "car-pick", "ip": "177.92.5.214"}, {"user": "carlos.campo", "ts": "2026-09-12T08:25:50.676367Z", "event": "click", "page": "index.html", "target": "preset-lucas", "ip": "201.17.140.161"}, {"user": "carlos.campo", "ts": "2026-09-12T08:26:50.676367Z", "event": "click", "page": "admin.html", "target": "btn-analyze", "ip": "201.17.140.109"}, {"user": "carlos.campo", "ts": "2026-09-12T08:20:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "189.45.88.54"}, {"user": "carlos.campo", "ts": "2026-09-12T07:50:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.37.21.142"}, {"user": "carlos.campo", "ts": "2026-09-12T07:42:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.37.21.14"}, {"user": "carlos.campo", "ts": "2026-09-12T07:42:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.37.21.169"}, {"user": "carlos.campo", "ts": "2026-09-12T14:37:50.676367Z", "event": "click", "page": "index.html", "target": "btn-png", "ip": "177.37.21.154"}, {"user": "carlos.campo", "ts": "2026-09-12T14:20:50.676367Z", "event": "click", "page": "admin.html", "target": "preset-lucas", "ip": "177.37.21.98"}, {"user": "carlos.campo", "ts": "2026-09-12T14:10:50.676367Z", "event": "click", "page": "admin.html", "target": "btn-analyze", "ip": "189.45.88.33"}, {"user": "carlos.campo", "ts": "2026-09-12T14:00:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "189.45.88.59"}, {"user": "carlos.campo", "ts": "2026-09-12T13:56:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.92.5.93"}, {"user": "carlos.campo", "ts": "2026-09-12T13:56:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "189.45.88.89"}, {"user": "carlos.campo", "ts": "2026-09-13T07:05:50.676367Z", "event": "click", "page": "index.html", "target": "btn-calib", "ip": "201.17.140.118"}, {"user": "carlos.campo", "ts": "2026-09-13T07:25:50.676367Z", "event": "click", "page": "vector.html", "target": "preset-sorriso", "ip": "201.17.140.44"}, {"user": "carlos.campo", "ts": "2026-09-13T07:45:50.676367Z", "event": "click", "page": "index.html", "target": "btn-calib", "ip": "189.45.88.28"}, {"user": "carlos.campo", "ts": "2026-09-13T07:44:50.676367Z", "event": "click", "page": "index.html", "target": "preset-lucas", "ip": "189.45.88.59"}, {"user": "carlos.campo", "ts": "2026-09-13T07:24:50.676367Z", "event": "click", "page": "index.html", "target": "opt-dtw", "ip": "189.45.88.6"}, {"user": "carlos.campo", "ts": "2026-09-13T07:01:50.676367Z", "event": "click", "page": "index.html", "target": "btn-png", "ip": "189.45.88.189"}, {"user": "carlos.campo", "ts": "2026-09-13T07:28:50.676367Z", "event": "click", "page": "report.html", "target": "opt-smooth", "ip": "177.92.5.100"}, {"user": "carlos.campo", "ts": "2026-09-13T07:11:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.37.21.35"}, {"user": "carlos.campo", "ts": "2026-09-13T07:00:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "189.45.88.196"}, {"user": "carlos.campo", "ts": "2026-09-13T07:00:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.92.5.72"}, {"user": "carlos.campo", "ts": "2026-09-13T15:41:50.676367Z", "event": "click", "page": "admin.html", "target": "car-pick", "ip": "201.17.140.164"}, {"user": "carlos.campo", "ts": "2026-09-13T15:40:50.676367Z", "event": "click", "page": "admin.html", "target": "car-pick", "ip": "177.37.21.126"}, {"user": "carlos.campo", "ts": "2026-09-13T15:32:50.676367Z", "event": "click", "page": "index.html", "target": "opt-smooth", "ip": "177.92.5.38"}, {"user": "carlos.campo", "ts": "2026-09-13T15:39:50.676367Z", "event": "click", "page": "report.html", "target": "btn-analyze", "ip": "189.45.88.37"}, {"user": "carlos.campo", "ts": "2026-09-13T15:32:50.676367Z", "event": "click", "page": "vector.html", "target": "btn-vectorize", "ip": "177.92.5.137"}, {"user": "carlos.campo", "ts": "2026-09-13T15:23:50.676367Z", "event": "click", "page": "admin.html", "target": "preset-sorriso", "ip": "177.37.21.122"}, {"user": "carlos.campo", "ts": "2026-09-13T15:57:50.676367Z", "event": "click", "page": "index.html", "target": "dl-pdf", "ip": "177.37.21.122"}, {"user": "carlos.campo", "ts": "2026-09-13T15:39:50.676367Z", "event": "click", "page": "report.html", "target": "opt-dtw", "ip": "201.17.140.68"}, {"user": "carlos.campo", "ts": "2026-09-13T15:46:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "189.45.88.192"}, {"user": "carlos.campo", "ts": "2026-09-13T15:23:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "201.17.140.169"}, {"user": "carlos.campo", "ts": "2026-09-13T15:19:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "189.45.88.77"}, {"user": "carlos.campo", "ts": "2026-09-13T15:19:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "189.45.88.217"}, {"user": "carlos.campo", "ts": "2026-09-14T15:06:50.676367Z", "event": "click", "page": "admin.html", "target": "car-search", "ip": "177.92.5.234"}, {"user": "carlos.campo", "ts": "2026-09-14T14:22:50.676367Z", "event": "click", "page": "vector.html", "target": "mapa", "ip": "189.45.88.89"}, {"user": "carlos.campo", "ts": "2026-09-14T14:36:50.676367Z", "event": "click", "page": "report.html", "target": "opt-smooth", "ip": "177.92.5.190"}, {"user": "carlos.campo", "ts": "2026-09-14T14:28:50.676367Z", "event": "click", "page": "admin.html", "target": "btn-analyze", "ip": "177.92.5.77"}, {"user": "carlos.campo", "ts": "2026-09-14T14:58:50.676367Z", "event": "click", "page": "report.html", "target": "preset-lucas", "ip": "201.17.140.176"}, {"user": "carlos.campo", "ts": "2026-09-14T14:29:50.676367Z", "event": "click", "page": "vector.html", "target": "car-search", "ip": "177.37.21.208"}, {"user": "carlos.campo", "ts": "2026-09-14T14:40:50.676367Z", "event": "click", "page": "index.html", "target": "btn-calib", "ip": "201.17.140.50"}, {"user": "carlos.campo", "ts": "2026-09-14T14:37:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "201.17.140.72"}, {"user": "carlos.campo", "ts": "2026-09-14T14:31:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "201.17.140.177"}, {"user": "carlos.campo", "ts": "2026-09-14T14:19:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.37.21.3"}, {"user": "carlos.campo", "ts": "2026-09-14T14:19:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.92.5.151"}, {"user": "carlos.campo", "ts": "2026-09-14T16:53:50.676367Z", "event": "click", "page": "index.html", "target": "dl-pdf", "ip": "201.17.140.57"}, {"user": "carlos.campo", "ts": "2026-09-14T16:45:50.676367Z", "event": "click", "page": "vector.html", "target": "btn-calib", "ip": "201.17.140.110"}, {"user": "carlos.campo", "ts": "2026-09-14T16:37:50.676367Z", "event": "click", "page": "admin.html", "target": "car-pick", "ip": "177.37.21.59"}, {"user": "carlos.campo", "ts": "2026-09-14T16:30:50.676367Z", "event": "click", "page": "admin.html", "target": "btn-analyze", "ip": "177.92.5.235"}, {"user": "carlos.campo", "ts": "2026-09-14T16:42:50.676367Z", "event": "click", "page": "index.html", "target": "preset-lucas", "ip": "177.92.5.133"}, {"user": "carlos.campo", "ts": "2026-09-14T17:18:50.676367Z", "event": "click", "page": "index.html", "target": "car-search", "ip": "189.45.88.175"}, {"user": "carlos.campo", "ts": "2026-09-14T16:45:50.676367Z", "event": "vectorize", "page": "index.html", "target": "btn-vectorize", "ip": "189.45.88.220"}, {"user": "carlos.campo", "ts": "2026-09-14T16:35:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.37.21.74"}, {"user": "carlos.campo", "ts": "2026-09-14T16:28:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.92.5.152"}, {"user": "carlos.campo", "ts": "2026-09-14T16:28:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "189.45.88.247"}, {"user": "carlos.campo", "ts": "2026-09-15T14:21:50.676367Z", "event": "click", "page": "admin.html", "target": "btn-analyze", "ip": "189.45.88.97"}, {"user": "carlos.campo", "ts": "2026-09-15T14:37:50.676367Z", "event": "click", "page": "report.html", "target": "btn-png", "ip": "177.92.5.164"}, {"user": "carlos.campo", "ts": "2026-09-15T14:43:50.676367Z", "event": "click", "page": "index.html", "target": "opt-dtw", "ip": "189.45.88.72"}, {"user": "carlos.campo", "ts": "2026-09-15T14:26:50.676367Z", "event": "click", "page": "index.html", "target": "btn-analyze", "ip": "189.45.88.10"}, {"user": "carlos.campo", "ts": "2026-09-15T14:22:50.676367Z", "event": "click", "page": "vector.html", "target": "preset-sorriso", "ip": "177.37.21.46"}, {"user": "carlos.campo", "ts": "2026-09-15T14:20:50.676367Z", "event": "analyze", "page": "index.html", "target": "btn-analyze", "ip": "177.37.21.81"}, {"user": "carlos.campo", "ts": "2026-09-15T14:13:50.676367Z", "event": "page_view", "page": "index.html", "target": null, "ip": "177.92.5.196"}, {"user": "carlos.campo", "ts": "2026-09-15T14:13:50.676367Z", "event": "login", "page": "index.html", "target": null, "ip": "177.92.5.191"}]};
+const DEMO_USERS = [{"user": "ana.consultora", "eventos": 278, "dias_ativos": 21, "logins": 33, "cliques": 170, "analises": 22, "vetorizacoes": 20, "calibracoes": 0, "primeiro_evento": "2026-09-07T18:08:50.676367Z", "ultimo_evento": "2026-10-05T16:04:50.676367Z"}, {"user": "carlos.campo", "eventos": 223, "dias_ativos": 14, "logins": 27, "cliques": 131, "analises": 21, "vetorizacoes": 17, "calibracoes": 0, "primeiro_evento": "2026-09-06T17:55:50.676367Z", "ultimo_evento": "2026-10-04T13:12:50.676367Z"}, {"user": "sandro.laudares", "eventos": 201, "dias_ativos": 18, "logins": 23, "cliques": 126, "analises": 18, "vetorizacoes": 11, "calibracoes": 0, "primeiro_evento": "2026-09-06T09:35:50.676367Z", "ultimo_evento": "2026-10-05T15:37:50.676367Z"}, {"user": "maria.silva", "eventos": 183, "dias_ativos": 13, "logins": 23, "cliques": 109, "analises": 15, "vetorizacoes": 13, "calibracoes": 0, "primeiro_evento": "2026-09-07T11:41:50.676367Z", "ultimo_evento": "2026-10-05T20:06:50.676367Z"}, {"user": "joao.agronomo", "eventos": 102, "dias_ativos": 8, "logins": 12, "cliques": 60, "analises": 11, "vetorizacoes": 7, "calibracoes": 0, "primeiro_evento": "2026-09-06T12:59:50.676367Z", "ultimo_evento": "2026-10-03T13:49:50.676367Z"}, {"user": "admin", "eventos": 9, "dias_ativos": 1, "logins": 5, "cliques": 3, "analises": 0, "vetorizacoes": 0, "calibracoes": 0, "primeiro_evento": "2026-10-05T21:58:06.363997Z", "ultimo_evento": "2026-10-05T22:12:43.141804Z"}];
+window.__DEMO__ = true;
+</script>
+<script>
+// modo demo: preenche sem login
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('gate').hidden = true;
+  document.getElementById('panel').hidden = false;
+  renderDemo();
+});
+function renderDemo() {
+  const a = DEMO_DATA;
+  const $ = id => document.getElementById(id);
+  const fmt = ts => ts ? new Date(ts).toLocaleString('pt-BR') : '—';
+  const tbl = (el, head, rows) => {
+    el.innerHTML = '<thead><tr>' + head.map(h=>`<th>${h}</th>`).join('') + '</tr></thead><tbody>' +
+      rows.map(r=>'<tr>'+r.map(c=>`<td>${c}</td>`).join('')+'</tr>').join('') + '</tbody>';
+  };
+  const hoje = (a.por_dia.find(d=>d.dia===new Date().toISOString().slice(0,10))||{}).n||0;
+  $('kpis').innerHTML = [['Eventos totais', a.total_eventos],['Usuários ativos', a.usuarios.length],
+    ['Eventos hoje', hoje],['Análises', a.usuarios.reduce((s,u)=>s+u.analises,0)],
+    ['Vetorizações', a.usuarios.reduce((s,u)=>s+u.vetorizacoes,0)]]
+    .map(([l,v])=>`<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+  tbl($('t-users'), ['Usuário','Eventos','Dias ativos','Logins','Cliques','Análises','Vetoriz.','Último evento'],
+    a.usuarios.map(u=>[u.user,u.eventos,u.dias_ativos,u.logins,u.cliques,u.analises,u.vetorizacoes,fmt(u.ultimo_evento)]));
+  tbl($('t-ev'), ['Evento','Total'], a.por_evento.map(e=>[e.event,e.n]));
+  tbl($('t-click'), ['Alvo do clique','Vezes'], a.cliques_frequentes.map(c=>[c.target,c.n]));
+  tbl($('t-page'), ['Página','Acessos'], a.por_pagina.map(p=>[p.page,p.n]));
+  tbl($('t-log'), ['Quando','Usuário','Evento','Página','Alvo','IP'],
+    a.recentes.slice(0,30).map(r=>[fmt(r.ts),r.user,r.event,r.page||'—',r.target||'—',r.ip||'—']));
+  new Chart($('ch-dia'), { type:'bar',
+    data:{ labels:a.por_dia.map(d=>d.dia.slice(5).split('-').reverse().join('/')),
+      datasets:[{ label:'Eventos', data:a.por_dia.map(d=>d.n), backgroundColor:'#4ade80', borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } } } });
+}
+</script>
+</head>
+<body>
+<div class="adm">
+  <div id="gate" class="card">
+    <h2>🔐 Área restrita — Administração</h2>
+    <p style="color:#7a9484">Somente o administrador.</p>
+    <input id="gate-user" placeholder="usuário" value="admin">
+    <input id="gate-pass" type="password" placeholder="senha">
+    <button id="gate-btn">Entrar</button>
+    <p id="gate-err" style="color:#b91c1c"></p>
+  </div>
+
+  <div id="panel" hidden>
+    <div class="adm-hero">
+      <div><h1>⚙️ Administração · Catamilho</h1>
+      <div style="opacity:.85;font-size:13px">gestão de usuários + auditoria de uso</div></div>
+      <a href="index.html" style="color:#fff">← voltar ao app</a>
+    </div>
+    <div class="tabs">
+      <button data-t="analytics" class="on">📊 Analytics</button>
+      <button data-t="users">👥 Usuários</button>
+    </div>
+
+    <section id="tab-analytics">
+      <div class="kpis" id="kpis"></div>
+      <div class="card"><h2>Eventos por dia (30 dias)</h2><div class="chart-box"><canvas id="ch-dia"></canvas></div></div>
+      <div class="card"><h2>Uso por usuário</h2><table id="t-users"></table></div>
+      <div class="card"><h2>Eventos por tipo</h2><table id="t-ev"></table></div>
+      <div class="card"><h2>Cliques mais frequentes</h2><table id="t-click"></table></div>
+      <div class="card"><h2>Páginas mais acessadas</h2><table id="t-page"></table></div>
+      <div class="card"><h2>Trilha de auditoria (100 eventos mais recentes)</h2><table id="t-log"></table></div>
+    </section>
+
+    <section id="tab-users" hidden>
+      <div class="card">
+        <h2>Criar usuário</h2>
+        <div class="row">
+          <input id="nu-name" placeholder="usuário">
+          <input id="nu-pass" type="password" placeholder="senha (mín. 4)">
+          <select id="nu-role"><option value="user">usuário</option><option value="admin">admin</option></select>
+          <button id="nu-btn">Criar</button>
+        </div>
+        <p id="nu-msg" style="font-size:13px;color:#4a7c59"></p>
+      </div>
+      <div class="card"><h2>Usuários cadastrados</h2><table id="t-manage"></table></div>
+    </section>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<script>
+const API = window.MILHO_API_URL || 'https://milho-ndvi-api.fly.dev';
+let TOK = null;
+const $ = id => document.getElementById(id);
+
+async function api(path, opts = {}) {
+  opts.headers = Object.assign({ 'Content-Type': 'application/json' },
+    opts.headers || {}, TOK ? { 'Authorization': 'Bearer ' + TOK } : {});
+  const r = await fetch(API + path, opts);
+  if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
+  return r.json();
+}
+
+$('gate-btn').onclick = async () => {
+  $('gate-err').textContent = '';
+  try {
+    const d = await api('/api/auth/login', { method: 'POST',
+      body: JSON.stringify({ username: $('gate-user').value,
+                             password: $('gate-pass').value }) });
+    if (d.role !== 'admin') throw new Error('esta conta não é administradora');
+    TOK = d.token;
+    $('gate').hidden = true; $('panel').hidden = false;
+    loadAnalytics(); loadUsers();
+  } catch (e) { $('gate-err').textContent = '✖ ' + e.message; }
+};
+
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.remove('on'));
+  b.classList.add('on');
+  $('tab-analytics').hidden = b.dataset.t !== 'analytics';
+  $('tab-users').hidden = b.dataset.t !== 'users';
+});
+
+function tbl(el, head, rows) {
+  el.innerHTML = '<thead><tr>' + head.map(h => `<th>${h}</th>`).join('') +
+    '</tr></thead><tbody>' +
+    (rows.length ? rows.map(r => '<tr>' + r.map(c => `<td>${c}</td>`).join('') + '</tr>').join('')
+                 : '<tr><td colspan=9 style="color:#7a9484">sem dados ainda</td></tr>') +
+    '</tbody>';
+}
+const fmt = ts => ts ? new Date(ts).toLocaleString('pt-BR') : '—';
+
+async function loadAnalytics() {
+  const a = await api('/api/admin/analytics');
+  const nu = a.usuarios.length;
+  const hoje = (a.por_dia.find(d => d.dia === new Date().toISOString().slice(0,10)) || {}).n || 0;
+  $('kpis').innerHTML = [
+    ['Eventos totais', a.total_eventos], ['Usuários ativos', nu],
+    ['Eventos hoje', hoje],
+    ['Análises', a.usuarios.reduce((s,u)=>s+u.analises,0)],
+    ['Vetorizações', a.usuarios.reduce((s,u)=>s+u.vetorizacoes,0)],
+  ].map(([l,v]) => `<div class="kpi"><div class="v">${v}</div><div class="l">${l}</div></div>`).join('');
+
+  tbl($('t-users'),
+    ['Usuário','Eventos','Dias ativos','Logins','Cliques','Análises','Vetoriz.','Calibr.','Último evento'],
+    a.usuarios.map(u => [u.user, u.eventos, u.dias_ativos, u.logins, u.cliques,
+      u.analises, u.vetorizacoes, u.calibracoes, fmt(u.ultimo_evento)]));
+  tbl($('t-ev'), ['Evento','Total'], a.por_evento.map(e => [e.event, e.n]));
+  tbl($('t-click'), ['Alvo do clique','Vezes'], a.cliques_frequentes.map(c => [c.target, c.n]));
+  tbl($('t-page'), ['Página','Acessos'], a.por_pagina.map(p => [p.page, p.n]));
+  tbl($('t-log'), ['Quando','Usuário','Evento','Página','Alvo','IP'],
+    a.recentes.map(r => [fmt(r.ts), r.user, r.event, r.page || '—', r.target || '—', r.ip || '—']));
+
+  new Chart($('ch-dia'), { type:'bar',
+    data:{ labels: a.por_dia.map(d=>d.dia.slice(5).split('-').reverse().join('/')),
+      datasets:[{ label:'Eventos', data:a.por_dia.map(d=>d.n),
+        backgroundColor:'#4ade80', borderRadius:5 }] },
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } } } });
+}
+
+async function loadUsers() {
+  const us = await api('/api/admin/users');
+  tbl($('t-manage'), ['Usuário','Papel','Status','Criado em','Eventos','Último acesso','Ações'],
+    us.map(u => [u.username,
+      u.role === 'admin' ? '<span class="badge b-adm">admin</span>' : '<span class="badge b-usr">user</span>',
+      u.active ? 'ativo' : '<span class="badge b-off">inativo</span>',
+      fmt(u.created_at), u.eventos, fmt(u.ultimo_acesso),
+      (u.username === 'admin' ? '—' :
+        `<button class="mini" onclick="toggleUser('${u.username}',${u.active ? 0 : 1})">${u.active ? 'desativar' : 'ativar'}</button> ` +
+        `<button class="mini danger" onclick="delUser('${u.username}')">remover</button>`)]));
+}
+window.toggleUser = async (u, act) => {
+  await api(`/api/admin/users/${u}/${act ? 'activate' : 'deactivate'}`, { method: 'POST' });
+  loadUsers();
+};
+window.delUser = async (u) => {
+  if (!confirm(`Remover o usuário "${u}"?`)) return;
+  await api(`/api/admin/users/${u}`, { method: 'DELETE' });
+  loadUsers();
+};
+$('nu-btn').onclick = async () => {
+  $('nu-msg').textContent = '';
+  try {
+    await api('/api/admin/users', { method: 'POST',
+      body: JSON.stringify({ username: $('nu-name').value,
+        password: $('nu-pass').value, role: $('nu-role').value }) });
+    $('nu-msg').textContent = '✔ usuário criado';
+    $('nu-name').value = ''; $('nu-pass').value = '';
+    loadUsers();
+  } catch (e) { $('nu-msg').textContent = '✖ ' + e.message; }
+};
+</script>
+</body>
+</html>
