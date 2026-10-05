@@ -94,12 +94,29 @@ def _run_analysis(req: AnalyzeReq):
         dtw_result = dtw.compare_curves(series, refs)
         if dtw_result.get("ok"):
             best = dtw_result["melhor"]["classe"]
+            margem = dtw_result.get("margem") or 0
+            # 1) desempate pico_verao (1a safra x soja unica)
             if result["classe"] == "pico_verao" and best in (
                     "milho_1a_safra", "soja_unica"):
                 result["classe"] = best
                 result["veredito"] = (dtw_result["melhor"]["rotulo"]
                                       + " (desempatado por DTW)")
                 result["desempate_dtw"] = True
+            # 2) ANTI-FALSO-POSITIVO milho x algodao: se as regras disseram
+            #    milho mas o DTW aponta algodao com vantagem clara, o DTW vence.
+            #    (regras sozinhas confundem as duas culturas — ambas tem pico
+            #    no outono; a curva temporal e o discriminante real.)
+            elif (result["classe"] in ("milho_safrinha", "provavel_safrinha")
+                  and best == "algodao" and margem >= 0.04):
+                result["classe"] = "algodao"
+                result["emoji"] = "🌱"
+                result["veredito"] = ("Algodão — ciclo alongado/atrasado "
+                                      "(DTW superou as regras fenológicas)")
+                result["confianca"] = round(min(0.95,
+                    result["confianca"] * 0.7 + dtw_result["melhor"]["similaridade"] * 0.3), 3)
+                result["correcao_dtw"] = True
+                result["resumo"] = (result.get("resumo", "") +
+                    f" DTW: algodao superou milho (margem {margem:.3f}).")
     return {"series": series, "meta": meta, "classification": result,
             "smoothed": smoothed, "dtw": dtw_result}
 
