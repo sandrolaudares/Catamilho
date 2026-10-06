@@ -144,3 +144,5 @@ header { display: flex; align-items: center; justify-content: space-between; fle
   #map-wrap { order: -1; }
   #map { height: 55vh; }
 }
+
+.leg-chip { display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:middle; }

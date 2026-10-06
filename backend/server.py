@@ -23,7 +23,7 @@ from stac_ndvi import serie_ndvi
 log = logging.getLogger("milho")
 logging.basicConfig(level=os.getenv("LOG_LEVEL", "INFO"))
 
-app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.8.0")
+app = FastAPI(title="Milho NDVI — Medio Norte MT", version="0.9.0")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
@@ -74,7 +74,7 @@ class VectorizeReq(BaseModel):
 
 @app.get("/api/health")
 def health():
-    return {"status": "ok", "service": "milho-ndvi", "version": "0.8.0",
+    return {"status": "ok", "service": "milho-ndvi", "version": "0.9.0",
             "time": dt.datetime.utcnow().isoformat() + "Z"}
 
 

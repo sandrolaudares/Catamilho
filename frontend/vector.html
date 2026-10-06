@@ -85,9 +85,23 @@ if (!D) {
     { maxZoom: 19, attribution: 'Esri World Imagery' }).addTo(map);
   const prop = L.geoJSON(D.geometry, { style: { color:'#16a34a', weight:2, fill:false, dashArray:'5 4' } }).addTo(map);
   const milho = L.geoJSON(D.geojson, {
-    style: { color:'#fbbf24', weight:1.5, fillColor:'#fbbf24', fillOpacity:0.45 },
-    onEachFeature: (f,l)=>l.bindPopup(`<b>Milho safrinha</b><br>${ha(f.properties.area_ha)}`),
+    style: (f) => ({ color: f.properties.cor || '#fbbf24', weight: 1.5,
+                     fillColor: f.properties.cor || '#fbbf24', fillOpacity: 0.45 }),
+    onEachFeature: (f,l)=>l.bindPopup(`<b>${f.properties.rotulo || f.properties.classe}</b><br>${ha(f.properties.area_ha)}`),
   }).addTo(map);
+  // legenda de classes
+  if (D.stats && D.stats.classes && D.stats.classes.length) {
+    const leg = L.control({ position: 'bottomright' });
+    leg.onAdd = () => {
+      const div = L.DomUtil.create('div');
+      div.style.cssText = 'background:#fff;padding:10px 12px;border-radius:10px;font:13px system-ui;box-shadow:0 2px 8px rgba(0,0,0,.25)';
+      div.innerHTML = '<b>Usos da propriedade</b><br>' + D.stats.classes.map(c =>
+        `<span style="display:inline-block;width:11px;height:11px;border-radius:3px;background:${c.cor};margin-right:6px"></span>${c.rotulo} — ${c.area_ha.toLocaleString('pt-BR')} ha`
+      ).join('<br>');
+      return div;
+    };
+    leg.addTo(map);
+  }
   if (feats.length) map.fitBounds(prop.getBounds().extend(milho.getBounds()), { padding:[30,30] });
   else map.fitBounds(prop.getBounds(), { padding:[30,30] });
 
