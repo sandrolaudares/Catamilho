@@ -121,7 +121,7 @@ function openReportTab(data, params) {
     const left = Math.round((screen.width - w) / 2);
     const top = Math.round((screen.height - h) / 2);
     window.open('report.html', 'milho_report',
-      `width=${w},height=${h},left=${left},top=${top},noopener`);
+      `width=${w},height=${h},left=${left},top=${top}`);
   } catch (e) {
     console.warn('report tab falhou', e);
   }

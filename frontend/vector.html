@@ -55,7 +55,7 @@ const $ = id => document.getElementById(id);
 function ha(v){ return (v==null?'—':(+v).toLocaleString('pt-BR',{maximumFractionDigits:1})+' ha'); }
 
 if (!D) {
-  document.body.innerHTML = '<div style="padding:50px;text-align:center;">Nenhum resultado de vetorização. Volte ao app e clique em "Vetorizar milho na propriedade".</div>';
+  document.body.innerHTML = '<div style="padding:50px;text-align:center;">Nenhum resultado de vetorização nesta janela. Feche-a e clique novamente em "Vetorizar milho na propriedade" no app (permita pop-ups para este site).</div>';
 } else {
   const s = D.stats || {};
   if (D.carInfo && D.carInfo.cod) $('hdr-sub').textContent =
