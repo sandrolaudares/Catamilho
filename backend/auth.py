@@ -220,3 +220,18 @@ def analytics() -> dict:
             "por_evento": por_evento, "por_dia": list(reversed(por_dia)),
             "por_pagina": por_pagina, "cliques_frequentes": clicks,
             "recentes": recentes}
+
+
+def change_password(username: str, new_password: str) -> bool:
+    """Troca a senha de um usuario existente (novo salt + hash)."""
+    username = username.strip().lower()
+    if len(new_password) < 4:
+        raise ValueError("senha muito curta (min 4)")
+    salt = secrets.token_hex(16)
+    with _conn() as c:
+        n = c.execute("UPDATE users SET pass_hash=?, salt=? WHERE username=?",
+                      (_hash(new_password, salt), salt, username)).rowcount
+        # invalida sessoes antigas do usuario (forca novo login)
+        c.execute("DELETE FROM sessions WHERE user_id IN"
+                  " (SELECT id FROM users WHERE username=?)", (username,))
+    return n > 0

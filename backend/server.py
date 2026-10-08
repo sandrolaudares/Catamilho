@@ -563,3 +563,20 @@ def clear_demo_endpoint(authorization: str | None = Header(None)):
     _admin_user(authorization)
     n = _auth.clear_demo()
     return {"ok": True, "eventos_removidos": n}
+
+
+# ---------- troca de senha (admin) ----------
+class PwReq(BaseModel):
+    username: str
+    new_password: str
+
+
+@app.post("/api/admin/password")
+def admin_change_password(req: PwReq, authorization: str | None = Header(None)):
+    _admin_user(authorization)
+    try:
+        if not _auth.change_password(req.username, req.new_password):
+            raise HTTPException(404, "usuário não encontrado")
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+    return {"ok": True, "msg": f"senha de '{req.username}' atualizada"}
